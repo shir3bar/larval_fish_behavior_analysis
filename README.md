@@ -7,4 +7,5 @@ This repository has 3 main parts:
 * **Performance analysis** - code for evaluating classifier under different data imbalances using a simulation study, currently only in R
 
 More documentation to come, for now you can more details [here](https://shir3bar.github.io/larval-fish-page).
-Get the models for the curated analysis pipeline [here](https://drive.google.com/file/d/1yxH-69Qd1w0-bfyjRpa32NHBhXbcJmXT/view?usp=sharing)
+
+Get the models for the curated analysis pipeline [here](https://drive.google.com/file/d/1yxH-69Qd1w0-bfyjRpa32NHBhXbcJmXT/view?usp=sharing).
