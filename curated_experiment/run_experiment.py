@@ -226,9 +226,9 @@ if __name__ == '__main__':
     os.makedirs(root_experiment_folder, exist_ok=True)
     video_folder = args.video_dir
     vid_name = args.video_name
-    detector_path = './models/fish_detector_50epochs_0004087.pth'
+    detector_path = './models/detector.pth'
     cfg_path = './models/SLOWFAST_8x8_R50_feed_pretrained.yaml'
-    classifier_path = './models/pretrained_var1_epoch20.pt'
+    classifier_path = './models/classifier.pt'
     detector, cfg_detect = load_detector(detector_path, confidence=0.5, nms=0.3)
     classifier, cfg_classify = load_action_classifier(cfg_path, classifier_path, pytorchvideo=True)
     all_vids_dict,vid_lens = get_all_vids_dict()
