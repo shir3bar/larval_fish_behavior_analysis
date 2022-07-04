@@ -8,4 +8,3 @@ This repository has 3 main parts:
 
 More documentation to come, for now you can more details [here](https://shir3bar.github.io/larval-fish-page).
 
-Get the models for the curated analysis pipeline [here](https://drive.google.com/file/d/1yxH-69Qd1w0-bfyjRpa32NHBhXbcJmXT/view?usp=sharing).
