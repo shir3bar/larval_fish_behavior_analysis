@@ -21,8 +21,8 @@ def get_frames_to_extract(frames_in_raw, init_frames,vid_len, buffer=25, swim_to
     forbidden_frames = [list(range(f-buffer*2,f+buffer*2)) for f in feeding_events_midframes]
     forbidden_frames = np.hstack(forbidden_frames)
     frame_population = [f for f in range(vid_len) if f not in forbidden_frames]
-    frames_to_extract+=random.sample(frame_population,swim_to_strike_ratio*len(feeding_events_midframes))
-    frames_to_extract+=feeding_events_midframes
+    frames_to_extract += random.sample(frame_population,swim_to_strike_ratio*len(feeding_events_midframes))
+    frames_to_extract += feeding_events_midframes
     feeding_events_midframes = np.sort(feeding_events_midframes)
     return np.sort(frames_to_extract), feeding_events_midframes
 
