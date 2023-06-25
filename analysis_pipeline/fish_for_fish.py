@@ -1,4 +1,4 @@
-limport os
+import os
 from tqdm import tqdm
 from loaders import *
 import random
@@ -367,7 +367,7 @@ if __name__ == '__main__':
             #file_list = [f for f in file_list if f in custom_file_list]
             #assert(len(file_list)==len(custom_file_list)), f'oops {len(file_list)} doesnt add up'
         assert len(file_list)>0, \
-            "Oops! video folder doesn't seem to have any of the curated experiment videos, check get_all_vids_dict()"
+            "Oops! video folder doesn't seem to have any of the experiment videos, check get_all_vids_dict()"
         for curr_path in file_list:
             curr_vid = os.path.basename(curr_path).split('.')[0]
             print(f'Vid {curr_vid} at work')
