@@ -6,6 +6,7 @@ from slowfast.datasets.loader import construct_loader
 from slowfast.datasets.build import DATASET_REGISTRY
 from dataset import Ptvfishbase
 import os
+import numpy as np
 from config_utils import pirate_load_cfg
 import matplotlib.pyplot as plt
 
@@ -128,6 +129,8 @@ def get_split_results(model, cfg, split, epoch, plot=False, save=False,i3d=False
 
 def get_epoch_results(checkpoint_dir, epoch, cfg_path, plot=False,i3d=False):
     cfg = pirate_load_cfg(cfg_path)
+    np.random.seed(cfg.RNG_SEED)
+    torch.manual_seed(cfg.RNG_SEED)
     checkpoint_path = os.path.join(checkpoint_dir, f'pretrained_epoch{epoch}.pt')
     model = load_checkpoint(checkpoint_path, cfg)
     splits = ['train','val','test']
@@ -143,13 +146,16 @@ def get_epoch_results(checkpoint_dir, epoch, cfg_path, plot=False,i3d=False):
 
 def eval_alt_testset(checkpoint_dir,epoch,cfg_path,testset_path, plot=False, i3d=False):
     cfg = pirate_load_cfg(cfg_path)
+    np.random.seed(cfg.RNG_SEED)
+    torch.manual_seed(cfg.RNG_SEED)
     checkpoint_path = os.path.join(checkpoint_dir, f'pretrained_epoch{epoch}.pt')
     model = load_checkpoint(checkpoint_path, cfg)
     cfg.DATA.PATH_TO_DATA_DIR = testset_path
     # create a folder with the dataset name to store results, assumes dataset name == folder name:
     exp_name = f'{os.path.basename(testset_path)}_eval'
-    save_dir = os.path.join(cfg.OUTPUT_DIR, exp_name)
+    save_dir = os.path.join(os.path.dirname(os.path.dirname(checkpoint_dir)), exp_name)
     cfg.OUTPUT_DIR = save_dir
+    print(f'saving results at {save_dir}')
     os.makedirs(save_dir, exist_ok=True)
     # get results:
     alt_test_results = get_split_results(model, cfg, split='test', epoch=epoch, plot=plot, i3d=i3d)
