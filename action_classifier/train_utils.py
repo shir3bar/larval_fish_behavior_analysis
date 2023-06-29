@@ -162,8 +162,8 @@ def train(cfg, model=None,pretrained=True, i3d=False, ssv2=False, val_every=5):
                 writer.add_scalars(
                     {
                 "Val/epoch_top1_err": val_stats['top1_err'],
-                "Val/epoch_precision": train_eval_stats['precision'],
-                "Val/epoch_recall": train_eval_stats['recall'] },
+                "Val/epoch_precision": val_stats['precision'],
+                "Val/epoch_recall": val_stats['recall'] },
                 global_step=cur_epoch,
             )
 
