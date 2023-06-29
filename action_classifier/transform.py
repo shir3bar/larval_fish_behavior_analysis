@@ -23,6 +23,8 @@ class RandomColorJitter(object):
                          img_contrast=self.contrast_ratio,
                          img_saturation=self.saturation_ratio)
             return x_mod
+    def __repr__(self):
+        return self.__class__.__name__ + f"(p={self.probability})"
 
 class RandomGaussianBlur(object):
     """
@@ -41,6 +43,8 @@ class RandomGaussianBlur(object):
         else:
             blurred_clip = self.t(clip)
             return blurred_clip
+    def __repr__(self):
+        return self.__class__.__name__ + f"(p={self.probability})"
 
 class RandomRot90Video(object):
     '''
@@ -59,6 +63,8 @@ class RandomRot90Video(object):
                 self.k = torch.randint(1,4,(1,)).item()
             rot_clip = torch.rot90(clip, dims=[-2,-1],k=self.k)
             return rot_clip
+    def __repr__(self):
+        return self.__class__.__name__ + f"(p={self.probability})"
 
 class RandomVerticalFlipVideo(object):
     """
@@ -86,13 +92,15 @@ class RandomVerticalFlipVideo(object):
     def __repr__(self):
         return self.__class__.__name__ + f"(p={self.probability})"
 
-class VarianceImageTransform(object):
+class VarianceImageTransform(torch.nn.Module):
     def __init__(self, var_dim=1):
+        super().__init__()
         assert var_dim in [1, 2]
         self.var_dim = var_dim
         self.kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         self.ekernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-    def __call__(self, clip):
+
+    def forward(self, clip):
         gray = torch.squeeze(clip[[0], ...])
         var = gray.var(axis=0).numpy()
         opening = cv2.morphologyEx(var, cv2.MORPH_OPEN, self.kernel)
@@ -104,3 +112,4 @@ class VarianceImageTransform(object):
         else:
             var_array = torch.stack((gray, gray, torch.stack([dilate_var] * gray.shape[0])))
         return var_array
+

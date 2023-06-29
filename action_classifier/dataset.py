@@ -26,7 +26,7 @@ from torchvision.transforms._transforms_video import (
 )
 from transform import *
 import os
-
+from slowfast.datasets.build import DATASET_REGISTRY
 
 def div255(x):
     """
@@ -54,7 +54,7 @@ def rgb2gray(x):
     """
     return x[[0], ...]
 
-
+@DATASET_REGISTRY.register()
 def Ptvfishbase(cfg, mode):
     """
     Construct the Fishbase video loader with a directory, each directory is split into modes ('train', 'val', 'test')
@@ -75,8 +75,8 @@ def Ptvfishbase(cfg, mode):
         "train",
         "val",
         "test",
-        'train_eval',
-        'val_eval',
+        #'train_eval',
+        #'val_eval',
     ], "Split '{}' not supported".format(mode)
 
     clip_duration = (
@@ -89,7 +89,7 @@ def Ptvfishbase(cfg, mode):
     labeled_video_paths = LabeledVideoPaths.from_directory(path_to_dir)
     num_videos = len(labeled_video_paths)
     labeled_video_paths.path_prefix = cfg.DATA.PATH_PREFIX
-    if mode in ["train", "val"]:
+    if not cfg.TRAIN.EVAL_DATASET:
         num_clips = 1
         num_crops = 1
 
@@ -194,42 +194,42 @@ def Ptvfishbase(cfg, mode):
     )
 
 
-def construct_loader(cfg, split):
-    """
-    Constructs the data loader for the given dataset.
-    Args:
-        cfg (CfgNode): configs. Details can be found in
-            slowfast/config/defaults.py
-        split (str): the split of the data loader. Options include `train`,
-            `val`, and `test`.
-    """
-    assert split in ["train", "val", "test","train_eval","val_eval"]
-    if split in ["train"]:
-        batch_size = int(cfg.TRAIN.BATCH_SIZE / max(1, cfg.NUM_GPUS))
-        #shuffle = True
-        drop_last = True
-    elif split in ["val", "val_eval","train_eval"]:
-        batch_size = int(cfg.TRAIN.BATCH_SIZE / max(1, cfg.NUM_GPUS))
-        #shuffle = False
-        drop_last = False
-    elif split in ["test"]:
-        batch_size = int(cfg.TEST.BATCH_SIZE / max(1, cfg.NUM_GPUS))
-        #shuffle = False
-        drop_last = False
-
-    # Construct the dataset
-    dataset = Ptvfishbase(cfg, split)
-
-    loader = torch.utils.data.DataLoader(
-            dataset,
-            batch_size=batch_size,
-            num_workers=cfg.DATA_LOADER.NUM_WORKERS,
-            pin_memory=cfg.DATA_LOADER.PIN_MEMORY,
-            drop_last=drop_last,
-            collate_fn=None,
-            #shuffle=shuffle,
-            worker_init_fn=utils.loader_worker_init_fn(dataset),
-        )
-    return loader
+# def construct_loader(cfg, split):
+#     """
+#     Constructs the data loader for the given dataset.
+#     Args:
+#         cfg (CfgNode): configs. Details can be found in
+#             slowfast/config/defaults.py
+#         split (str): the split of the data loader. Options include `train`,
+#             `val`, and `test`.
+#     """
+#     assert split in ["train", "val", "test","train_eval","val_eval"]
+#     if split in ["train"]:
+#         batch_size = int(cfg.TRAIN.BATCH_SIZE / max(1, cfg.NUM_GPUS))
+#         shuffle = True
+#         drop_last = True
+#     elif split in ["val", "val_eval","train_eval"]:
+#         batch_size = int(cfg.TRAIN.BATCH_SIZE / max(1, cfg.NUM_GPUS))
+#         shuffle = False
+#         drop_last = False
+#     elif split in ["test"]:
+#         batch_size = int(cfg.TEST.BATCH_SIZE / max(1, cfg.NUM_GPUS))
+#         shuffle = False
+#         drop_last = False
+# 
+#     # Construct the dataset
+#     dataset = Ptvfishbase(cfg, split)
+# 
+#     loader = torch.utils.data.DataLoader(
+#             dataset,
+#             batch_size=batch_size,
+#             num_workers=cfg.DATA_LOADER.NUM_WORKERS,
+#             pin_memory=cfg.DATA_LOADER.PIN_MEMORY,
+#             drop_last=drop_last,
+#             collate_fn=None,
+#             shuffle=shuffle,
+#             worker_init_fn=utils.loader_worker_init_fn(dataset),
+#         )
+#     return loader
 
 

@@ -7,11 +7,14 @@ import slowfast.visualization.tensorboard_vis as tb
 from sklearn.metrics import confusion_matrix
 from slowfast.utils import metrics
 from slowfast.datasets import loader
-from dataset import construct_loader
-from eval_utils import eval_epoch
+#from dataset import construct_loader
+from eval_utils import eval_epoch, load_checkpoint, pirate_load_cfg
+from slowfast.datasets.loader import construct_loader
+from slowfast.datasets.build import DATASET_REGISTRY
+from dataset import Ptvfishbase
 
 
-def train_one_epoch(model, optim, loader_train, loss_func,cfg):
+def train_one_epoch(model, optim, loader_train, loss_func,cfg, i3d=False,calc_stats=True):
     model.train()
     train_loss = 0
     num_correct = 0
@@ -26,7 +29,10 @@ def train_one_epoch(model, optim, loader_train, loss_func,cfg):
         else:
             inputs = inputs.cuda(non_blocking=True)
         labels = labels.cuda()
-        preds = model(inputs)
+        if i3d:
+            preds = model(inputs[0])
+        else:
+            preds = model(inputs)
         preds = torch.nn.functional.softmax(preds, dim=1)
         y_hat = preds.max(axis=1).indices
         y_hats.append(y_hat)
@@ -44,28 +50,59 @@ def train_one_epoch(model, optim, loader_train, loss_func,cfg):
         train_loss += loss / preds.shape[0]
     all_labels = torch.hstack(all_labels)
     y_hats = torch.stack(y_hats).ravel()
-    tn, fp, fn, tp = confusion_matrix(1 - all_labels.cpu(),
-                                      1 - y_hats.cpu()).ravel()  # since feed is label 0 and we want it as label 1,
-    train_stats['loss'] = train_loss
-    train_stats['fns'] = fn
-    train_stats['fps'] = fp
-    train_stats['tns'] = tn
-    train_stats['tps'] = tp
-    train_stats['top1_err'] = (running_err / len(loader_train.dataset))
-    train_stats['accuracy'] = num_correct / len(loader_train.dataset)
+    if calc_stats:
+        tn, fp, fn, tp = confusion_matrix(1 - all_labels.cpu(),
+                                          1 - y_hats.cpu()).ravel()  # since feed is label 0 and we want it as label 1,
+        train_stats['loss'] = train_loss
+        train_stats['fns'] = fn
+        train_stats['fps'] = fp
+        train_stats['tns'] = tn
+        train_stats['tps'] = tp
+        train_stats['top1_err'] = (running_err / len(loader_train.dataset))
+        train_stats['accuracy'] = num_correct / len(loader_train.dataset)
+    else:
+        train_stats['loss'] = train_loss
     return model, optim, train_stats
 
+def load_model(cfg,pretrained=False,i3d=False,ssv2=False):
+    if i3d:
+        model_name = "i3d_r50"
+        lin_features = 2048
+    else:
+        model_name = "slowfast_r50"
+        lin_features = 2304
 
-def train(cfg, pretrained=True):
+    if ssv2:
+        # load ssv2 pretrained model, note you need to download the checkpoint to the checkpoints/ssv2_pretrained folder
+        #os.system('wget https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/ssv2/SLOWFAST_8x8_R50.pyth')
+        ckpt_path = './checkpoints/ssv2_pretrained/SLOWFAST_8x8_R50.pyth'
+        assert os.path.exists(ckpt_path), print('Oops! SSv2 pretrained model checkpoint not found (see readme)')
+        tmp_cfg = cfg.clone()
+        tmp_cfg.MODEL.NUM_CLASSES = 174 # change the number of classes to load the checkpoint
+        model = load_checkpoint(ckpt_path, tmp_cfg)
+    else:
+        model = torch.hub.load("facebookresearch/pytorchvideo:main", model=model_name, pretrained=pretrained)
+    model.blocks[6].proj = torch.nn.Linear(in_features=lin_features, out_features=cfg.MODEL.NUM_CLASSES)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model.to(device)
+    return model
+
+def train(cfg, model=None,pretrained=True, i3d=False, ssv2=False, val_every=5):
+    #read config file:
+    if type(cfg)==str:
+        #cfg argument is a path, load it as cfg:
+        cfg = pirate_load_cfg(cfg_path)
     print('starting train')
+    #set random seeds
     np.random.seed(cfg.RNG_SEED)
     torch.manual_seed(cfg.RNG_SEED)
+    #get data loaders:
     loader_train = construct_loader(cfg, 'train')
     loader_val = construct_loader(cfg, 'val')
-    model_name = "slowfast_r50"
-    model = torch.hub.load("facebookresearch/pytorchvideo:main", model=model_name, pretrained=pretrained)
-    model.blocks[6].proj = torch.nn.Linear(in_features=2304, out_features=cfg.MODEL.NUM_CLASSES)
-    model.cuda()
+    # get model if not given:
+    if model is None:
+        print('loading model')
+        model = load_model(cfg,pretrained,i3d,ssv2)
     if cfg.TENSORBOARD.ENABLE:
         writer = tb.TensorboardWriter(cfg)
     else:
@@ -86,39 +123,51 @@ def train(cfg, pretrained=True):
     f1_func = lambda st: 2 * (st['precision'] * st['recall']) / (st['precision'] + st['recall'])
     for cur_epoch in range(cfg.SOLVER.MAX_EPOCH):
         loader.shuffle_dataset(loader_train, cur_epoch)
-        model, optimizer, train_stats = train_one_epoch(model, optimizer, loader_train, loss_func,cfg)
+        model, optimizer, train_stats = train_one_epoch(model, optimizer, loader_train, loss_func, cfg, i3d=i3d)
         scheduler.step(train_stats['loss'])
-        train_labels, train_y_hats, train_eval_stats, _, _ = eval_epoch(model, loader_train, cfg)
-        val_labels, val_y_hats, val_stats, _, _ = eval_epoch(model, loader_val, cfg)
+        #train_labels, train_y_hats, train_eval_stats, _, _ = eval_epoch(model, loader_train, cfg, i3d=i3d)
+
         train_stats['precision'] = prec_func(train_stats)
         train_stats['recall'] = rec_func(train_stats)
         train_stats['f1'] = f1_func(train_stats)
-        train_eval_stats['precision'] = prec_func(train_eval_stats)
-        train_eval_stats['recall'] = rec_func(train_eval_stats)
-        train_eval_stats['f1'] = f1_func(train_eval_stats)
-        val_stats['precision'] = prec_func(val_stats)
-        val_stats['recall'] = rec_func(val_stats)
-        val_stats['f1'] = f1_func(val_stats)
+        #train_eval_stats['precision'] = prec_func(train_eval_stats)
+        #train_eval_stats['recall'] = rec_func(train_eval_stats)
+        #train_eval_stats['f1'] = f1_func(train_eval_stats)
+
         train_f1s.append(train_stats['f1'])
-        val_f1s.append(val_stats['f1'])
+
         train_recall.append(train_stats['recall'])
-        val_recall.append(val_stats['recall'])
+
         train_losses.append(train_stats['loss'])
         if writer is not None:
             writer.add_scalars(
                 {
                     "Train/epoch_loss": train_stats['loss'],
                     "Train/epoch_top1_err": train_stats['top1_err'],
-                    "Train_eval/epoch_top1_err": train_eval_stats['top1_err'],
-                    "Train_eval/epoch_accuracy": train_eval_stats['accuracy'],
-                    "Train_eval/epoch_precision": train_eval_stats['precision'],
-                    "Train_eval/epoch_recall": train_eval_stats['recall'],
-                    "Val/epoch_top1_err": val_stats['top1_err'],
-                    "Val/epoch_precision": train_eval_stats['precision'],
-                    "Val/epoch_recall": train_eval_stats['recall']
+                    #"Train_eval/epoch_top1_err": train_eval_stats['top1_err'],
+                    "Train/epoch_accuracy": train_stats['accuracy'],
+                    "Train/epoch_precision": train_stats['precision'],
+                    "Train/epoch_recall": train_stats['recall']
                 },
                 global_step=cur_epoch,
             )
+        if cur_epoch % val_every == 0:
+            val_labels, val_y_hats, val_stats, _, _ = eval_epoch(model, loader_val, cfg, i3d=i3d)
+            val_stats['precision'] = prec_func(val_stats)
+            val_stats['recall'] = rec_func(val_stats)
+            val_stats['f1'] = f1_func(val_stats)
+            val_f1s.append(val_stats['f1'])
+            val_recall.append(val_stats['recall'])
+            if writer is not None:
+                writer.add_scalars(
+                    {
+                "Val/epoch_top1_err": val_stats['top1_err'],
+                "Val/epoch_precision": train_eval_stats['precision'],
+                "Val/epoch_recall": train_eval_stats['recall'] },
+                global_step=cur_epoch,
+            )
+
+
         print(f'{cur_epoch}/{cfg.SOLVER.MAX_EPOCH}: loss {train_stats["loss"]} '
               f'Train F1 {train_stats["f1"]:.2f}, acc {train_stats["accuracy"]:.2f}, '
               f'recall {train_stats["recall"]:.2f}')
@@ -131,7 +180,7 @@ def train(cfg, pretrained=True):
                     'val_y_hats': val_y_hats,
                     'scheduler_state': scheduler.state_dict(),
                     'train_stats': train_stats,
-                    'train_eval_stats': train_eval_stats,
+                    #'train_eval_stats': train_eval_stats,
                     'val_stats': val_stats},
                    os.path.join(exp_dir, 'checkpoints', f'pretrained_epoch{cur_epoch}.pt'))
     if writer is not None:
