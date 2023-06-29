@@ -62,7 +62,7 @@ def train_one_epoch(model, optim, loader_train, loss_func,cfg, i3d=False,calc_st
         train_stats['accuracy'] = num_correct / len(loader_train.dataset)
     else:
         train_stats['loss'] = train_loss
-    return model, optim, train_stats
+    return model, optim, train_stats, all_labels, y_hats
 
 def load_model(cfg,pretrained=False,i3d=False,ssv2=False):
     if i3d:
@@ -123,7 +123,7 @@ def train(cfg, model=None,pretrained=True, i3d=False, ssv2=False, val_every=5):
     f1_func = lambda st: 2 * (st['precision'] * st['recall']) / (st['precision'] + st['recall'])
     for cur_epoch in range(cfg.SOLVER.MAX_EPOCH):
         loader.shuffle_dataset(loader_train, cur_epoch)
-        model, optimizer, train_stats = train_one_epoch(model, optimizer, loader_train, loss_func, cfg, i3d=i3d)
+        model, optimizer, train_stats, train_labels, train_y_hats= train_one_epoch(model, optimizer, loader_train, loss_func, cfg, i3d=i3d)
         scheduler.step(train_stats['loss'])
         #train_labels, train_y_hats, train_eval_stats, _, _ = eval_epoch(model, loader_train, cfg, i3d=i3d)
 
@@ -151,6 +151,9 @@ def train(cfg, model=None,pretrained=True, i3d=False, ssv2=False, val_every=5):
                 },
                 global_step=cur_epoch,
             )
+        print(f'{cur_epoch}/{cfg.SOLVER.MAX_EPOCH}: loss {train_stats["loss"]} '
+              f'Train F1 {train_stats["f1"]:.2f}, acc {train_stats["accuracy"]:.2f}, '
+              f'recall {train_stats["recall"]:.2f}')
         if cur_epoch % val_every == 0:
             val_labels, val_y_hats, val_stats, _, _ = eval_epoch(model, loader_val, cfg, i3d=i3d)
             val_stats['precision'] = prec_func(val_stats)
@@ -166,12 +169,10 @@ def train(cfg, model=None,pretrained=True, i3d=False, ssv2=False, val_every=5):
                 "Val/epoch_recall": val_stats['recall'] },
                 global_step=cur_epoch,
             )
+            print(f'Val F1 {val_stats["f1"]:.2f}, acc {val_stats["accuracy"]:.2f}, recall {val_stats["recall"]:.2f}')
 
 
-        print(f'{cur_epoch}/{cfg.SOLVER.MAX_EPOCH}: loss {train_stats["loss"]} '
-              f'Train F1 {train_stats["f1"]:.2f}, acc {train_stats["accuracy"]:.2f}, '
-              f'recall {train_stats["recall"]:.2f}')
-        print(f'Val F1 {val_stats["f1"]:.2f}, acc {val_stats["accuracy"]:.2f}, recall {val_stats["recall"]:.2f}')
+
         torch.save({'model_state': model.state_dict(), 'optimizer_state': optimizer.state_dict(),
                     'train_losses': train_losses,
                     'train_labels': train_labels,
