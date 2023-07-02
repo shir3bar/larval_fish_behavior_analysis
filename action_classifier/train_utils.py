@@ -12,7 +12,7 @@ from eval_utils import eval_epoch, load_checkpoint, pirate_load_cfg
 from slowfast.datasets.loader import construct_loader
 from slowfast.datasets.build import DATASET_REGISTRY
 from dataset import Ptvfishbase
-
+import yaml
 
 def train_one_epoch(model, optim, loader_train, loss_func,cfg, i3d=False,calc_stats=True):
     model.train()
@@ -186,3 +186,6 @@ def train(cfg, model=None,pretrained=True, i3d=False, ssv2=False, val_every=5):
                    os.path.join(exp_dir, 'checkpoints', f'pretrained_epoch{cur_epoch}.pt'))
     if writer is not None:
         writer.close()
+    with open(os.path.join(exp_dir,'cfg.yaml'),'w') as f:
+        # save training cfg in experiment folder
+        yaml.dump(cfg,f, default_flow_style=False)
