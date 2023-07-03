@@ -80,7 +80,7 @@ python eval_net /path/to/experiment_dir/checkpoints ./configs/SLOWFAST_8x8_pretr
 --epoch 49 --plot --alt_testset_dir /path/to/your/test_set
 ```
 
-###Aknowledgements:
+###Acknowledgements:
 This code is based on:
 * [pySlowFast](https://github.com/facebookresearch/SlowFast/)
 * [Pytorchvideo](https://pytorchvideo.org/) 
