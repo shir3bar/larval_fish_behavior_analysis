@@ -2,7 +2,8 @@
 Code to train and evaluate action classifiers for larval fish behavior analysis 
 using the [pySlowFast](https://github.com/facebookresearch/SlowFast/) 
 and [Pytorchvideo](https://pytorchvideo.org/) frameworks.
-*Soon* Colab notebook.
+
+**Soon** Colab notebook.
 
 ### Getting started
 This code was test on Ubuntu 20.04 LTS and requires:
