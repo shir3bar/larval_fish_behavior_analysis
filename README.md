@@ -7,7 +7,7 @@ This repository has 3 main parts:
 * **Bootstrap rates** - validate rates measured with the pipeline by bootstrapping
 * **Archive** - code from previous iterations of these experiments
 
-More documentation to come, for now you can find more details and 
+More documentation and code to come, for now you can find more details and 
 the data [here](https://shir3bar.github.io/larval-fish-page).
-The manuscript pre-print can be found [here](https://www.biorxiv.org/content/10.1101/2022.11.14.516417v1).
+A more technical report of the method can be found [here](https://www.biorxiv.org/content/10.1101/2022.11.14.516417v1).
 
