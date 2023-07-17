@@ -1,0 +1,11 @@
+name: larvaeAction
+channels:
+  - defaults
+dependencies:
+  - python=3.8
+  - jupyter
+  - av
+  - moviepy
+  - numpy
+  - gcc
+prefix: /home/shirbar/anaconda3/envs/larvaeAction
