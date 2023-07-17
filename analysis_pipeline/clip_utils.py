@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/content/drive/MyDrive/PhD/codes/SlowFas')
+sys.path.append('../')
 import numpy as np
 import cv2
 import moviepy.editor as mpy
@@ -17,7 +17,8 @@ from pytorchvideo.transforms import (
     UniformCropVideo,
     UniformTemporalSubsample,
 )
-from slowfast.datasets.ptv_datasets import Ptvfishbase, PackPathway, div255, rgb2gray
+from slowfast.datasets.ptv_datasets import  PackPathway
+from action_classifier.dataset import div255, rgb2gray
 from slowfast.datasets.transform import VarianceImageTransform
 import os
 import shutil
