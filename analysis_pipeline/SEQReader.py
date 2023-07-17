@@ -5,6 +5,11 @@ import cv2
 
 
 class SEQReader:
+    '''
+    This code is a python implementation of this MATLAB code:
+    https://www.mathworks.com/matlabcentral/fileexchange/68341-readjpegseq
+    by Paul Siefert
+    '''
     INITIAL_BYTES_TO_DISCARD = 548
 
     def __init__(self, filedir, endiantype='<'):

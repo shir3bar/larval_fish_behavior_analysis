@@ -2,7 +2,7 @@ import os
 from tqdm import tqdm
 from loaders import *
 import random
-import argparse
+from parser import get_parser
 from utils import get_action_classifications,get_fish_detection,plot_boxes, get_detections_from_preds
 from clip_utils import get_clips, save_clip
 import time
@@ -301,30 +301,6 @@ def get_file_list(dir_to_scan, vid_extension, custom_file_list=[]):
     return file_list
 
 
-
-def get_parser():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('root_dir', help='enter root path where experiments will be saved')
-    parser.add_argument('video_dir', help='enter path to directory containing videos')
-    parser.add_argument('-video_name', default='all', help='Specify a single video to analyze, if no name is specified '
-                                                           'all videos in the folder will be analyzed')
-    parser.add_argument('-clip_duration',type=int,default=80,help='Duration of clips to cut for the action classifier')
-    parser.add_argument('-clip_size',type=int,default=400,help='Size of clips to cut for the action classifier')
-    parser.add_argument('-no_clips', action='store_true',
-                        help="Don't save the clips used for action classification inference.")
-    parser.add_argument('-vid_ext',type=str,default='.avi',help='video type, can be avi or seq')
-    parser.add_argument('-dec_thresh', type=float, default=0.9, help='decision threshold for the classifier')
-    parser.add_argument('-fish_to_sample',type=int, default=np.inf, help='how many striking fish to fish before stopping')
-    parser.add_argument('-last_frame', type=int, default=None,
-                        help='Last frame to sample')
-    parser.add_argument('-first_frame', type=int, default=0,
-                        help='Frame to start sampling from, default at 0')
-    parser.add_argument('-classify_only',action='store_true',help='Use stored detections (must be in specific csv format)')
-    parser.add_argument('-classifier_name',type=str,default='SlowFastKinetics')
-    parser.add_argument('-video_list_path',type=str, default='', help='path to a csv with video file names to analyze')
-    return parser
-
-
 if __name__ == '__main__':
     parser = get_parser()
     args = parser.parse_args()
@@ -334,7 +310,7 @@ if __name__ == '__main__':
     video_folder = args.video_dir
     vid_name = args.video_name
     detector_path = './models/detector.pth'
-    cfg_path = './models/SLOWFAST_8x8_R50_feed_pretrained.yaml'
+    cfg_path = args.cfg_path
     classifier_path = f'./models/{args.classifier_name}.pt'
     detector, cfg_detect = load_detector(detector_path, confidence=0.5, nms=0.3)
     classifier, cfg_classify = load_action_classifier(cfg_path, classifier_path, pytorchvideo=True)
