@@ -17,7 +17,7 @@ It is also highly recommended to use conda or another virtual environment manage
 git clone https://github.com/shir3bar/larval_fish_behavior_analysis
 cd larval_fish_behavior_analysis
 
-conda env create -f environment.yml
+conda env create -f environment_ubuntu.yml
 conda activate larvaeAction
 
 cd ./analysis_pipeline
@@ -52,7 +52,7 @@ To use the pipeline with pre-existing detections, use the `-classify_only` flag 
 For other options such as clip sizes, durations, and duration of samples from pre-existing videos, please see `./parser.py` or:
 
 ```commandline
-python fish_for_fish.py -help
+python fish_for_fish.py --help
 ```
 
 ### ***SOON:*** Sample video
