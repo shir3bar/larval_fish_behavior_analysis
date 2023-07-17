@@ -1,7 +1,8 @@
 ## Action classifier training
 Code to train and evaluate action classifiers for larval fish behavior analysis 
 using the [pySlowFast](https://github.com/facebookresearch/SlowFast/) 
-and [Pytorchvideo](https://pytorchvideo.org/) frameworks.
+and [Pytorchvideo](https://pytorchvideo.org/) frameworks. <br>
+More nitty gritty details of ablation studies can be found [here](https://www.biorxiv.org/content/10.1101/2022.11.14.516417v1.abstract).
 
 **Soon** Colab notebook.
 
@@ -20,7 +21,7 @@ cd larval_fish_behavior_analysis
 
 conda env create -f environment.yml
 conda activate larvaeAction
-````
+```
 
 Note a different installation of Pytorch maybe necessary, depending on CUDA version.
 See INSTALL.md for different setup approach.
@@ -60,18 +61,18 @@ Including: type of model, path to data, path to save output, etc. See samples in
 ### Train a model
 To fine-tune a SlowFast network pretrained on Kinetics, use:
 ```commandline
-python run_net --cfg ./configs/SLOWFAST_8x8_pretrained.yaml --pretrained
+python run_net.py --cfg ./configs/SLOWFAST_8x8_pretrained.yaml --pretrained
 ```
 To fine-tune a network pretrained on SSv2, use:
 ```commandline
-python run_net --cfg ./configs/SLOWFAST_8x8_pretrained.yaml --pretrained --sv2
+python run_net.py --cfg ./configs/SLOWFAST_8x8_pretrained.yaml --pretrained --ssv2
 ```
 
 ### Evaluate a model
 
 To evaluate a model on it's training dataset (all splits) and plot ROC/PRC curves:
 ```commandline
-python eval_net /path/to/experiment_dir/checkpoints ./configs/SLOWFAST_8x8_pretrained.yaml 
+python eval_net.py /path/to/experiment_dir/checkpoints ./configs/SLOWFAST_8x8_pretrained.yaml 
 --epoch 49 --plot
 ```
 This will also save a `.csv` with all predictions. 
