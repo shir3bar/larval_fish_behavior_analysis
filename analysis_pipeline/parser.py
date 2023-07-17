@@ -1,4 +1,5 @@
 import argparse
+import numpy as np
 
 def get_parser():
     parser = argparse.ArgumentParser()

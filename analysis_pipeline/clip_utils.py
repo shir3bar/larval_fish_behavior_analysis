@@ -19,7 +19,7 @@ from pytorchvideo.transforms import (
 )
 from slowfast.datasets.ptv_datasets import  PackPathway
 from action_classifier.dataset import div255, rgb2gray
-from slowfast.datasets.transform import VarianceImageTransform
+from action_classifier.transform import VarianceImageTransform
 import os
 import shutil
 import pandas as pd
