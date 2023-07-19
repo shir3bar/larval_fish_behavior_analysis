@@ -1,13 +1,8 @@
 import sys
-sys.path.append('/media/shirbar/DATA/codes/fish_larvae_feeding')
-sys.path.append('/media/shirbar/DATA/codes/SlowFast/')
-sys.path.append('/home/shirbar/codes/fish_larvae_feeding')
-sys.path.append('/home/shirbar/codes/SlowFast/')
+sys.path.append('../')
 from SEQReader import SEQReader
 import torch
 import cv2
-from slowfast.config.defaults import assert_and_infer_cfg
-from slowfast.utils.parser import load_config, parse_args
 from slowfast.models.ptv_model_builder import PTVSlowFast,PTVResNet
 from detectron2.utils.logger import setup_logger
 setup_logger()
@@ -15,6 +10,7 @@ from detectron2 import model_zoo
 from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
 from detectron2.data import MetadataCatalog, DatasetCatalog
+from action_classifier.config_utils import pirate_load_cfg
 
 
 def load_video(path):
@@ -46,19 +42,8 @@ def load_detector(path,nms=0.3,confidence=None):
     return predictor,cfg
 
 
-class Args:
-    def __init__(self, cfg_file):
-        self.cfg_file = cfg_file
-        self.shard_id = 0
-        self.num_shards = 1
-        self.init_method = 'tcp://localhost:9999'
-        self.opts = None
-
-
 def load_action_classifier(cfg_path, model_chkpt_path,pytorchvideo=False):
-    args = Args(cfg_path)
-    cfg = load_config(args)
-    cfg = assert_and_infer_cfg(cfg)
+    cfg = pirate_load_cfg(cfg_path=cfg_path)
     if pytorchvideo:
         model_name = "slowfast_r50"
         model = torch.hub.load("facebookresearch/pytorchvideo:main", model=model_name, pretrained=False)

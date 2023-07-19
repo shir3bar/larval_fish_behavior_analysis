@@ -1,4 +1,6 @@
 import os
+import pandas as pd
+import numpy as np
 from tqdm import tqdm
 from loaders import *
 import random
@@ -6,6 +8,7 @@ from parser import get_parser
 from utils import get_action_classifications,get_fish_detection,plot_boxes, get_detections_from_preds
 from clip_utils import get_clips, save_clip
 import time
+import matplotlib.pyplot as plt
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -160,7 +163,7 @@ def only_classify(root_path, vid_path, vid_name, clip_size, classifier, classifi
                  'num_labeled_strike': tot_strike,
                  'num_labeled_swim': tot_swim,
                  'total_clips': tot_swim + tot_strike, 'execution_time': execution_time}
-    log_df = log_df.append(entry, ignore_index=True)
+    log_df = pd.concat([log_df,pd.DataFrame([entry])],ignore_index=True)#log_df.append(entry, ignore_index=True)
     log_df.to_csv(log_path, index=False)
     print(log_path)
     print(execution_time)
@@ -233,23 +236,24 @@ def fish_in_vid(root_path, vid_path, vid_name, clip_size,
                 if save_clips:
                     clip_name=write_clip(folder_path,clip=clips[i],prediction=thresh_pred,frame_num=frame_num,idx=i,
                                vid_name=vid_name, centroid=centroids[i])
-                df_preds = df_preds.append({'vid_name':vid_name,'frame':frame_num,'clip_name':clip_name,
+                new_row = {'vid_name':vid_name,'frame':frame_num,'clip_name':clip_name,
                                             'fish_id':i,'centroid':centroids[i],
                                             'bboxs':list(boxes.values())[i],
                                         'detection_scores':list(boxes.keys())[i],
                                             'detection_pred_class':outputs['instances'].pred_classes[i].item(),
                                             'action_preds':thresh_pred,
-                                            'strike_scores':preds[i,0].item(),'comments':comments,},
-                                   ignore_index=True)
+                                            'strike_scores':preds[i,0].item(),'comments':comments}
+                df_preds = pd.concat([df_preds,pd.DataFrame([new_row])],axis=0,ignore_index=True)
             all_preds.append(preds),
             feeding_fish = (preds>=thresh).sum(axis=0)[0].item()
 
         else:
-            df_preds = df_preds.append({'vid_name':vid_name,'frame':frame_num,'clip_name':None,
+            new_row = {'vid_name':vid_name,'frame':frame_num,'clip_name':None,
                                         'fish_id':None,'centroid':None, 'bboxs':None,
                                         'detection_scores':None,'detection_pred_class':None,
                                             'action_preds':None, 'strike_scores':None,'comments':comments},
-                                   ignore_index=True)
+            df_preds = pd.concat([df_preds,pd.DataFrame(new_row,columns=df_preds.columns)],
+                                 axis=0,ignore_index=True)
             feeding_fish = 0
 
         frames.append(frame_num)
@@ -272,7 +276,9 @@ def fish_in_vid(root_path, vid_path, vid_name, clip_size,
 
 
     entry = {'experiment_name': EXP_NAME, 'video_name': vid_name,'DPH':dph,'cohort':fish,'seq':seq,'fps':fps,
-                 'overlap': 0.25, 'num_frames_sampled': len(frames),'last_frame_sampled':frames[-1],
+                 'overlap': 0.25, 'num_frames_sampled': len(frames),
+             'first_frame': start_idx,
+             'last_frame_sampled':frames[-1],
                 'duration sampled': time_sampled,
                  'num_frames_with_detections': frames_with_detections,
                  'sample_regime': '5min', 'clip_duration': clip_duration,
@@ -280,22 +286,25 @@ def fish_in_vid(root_path, vid_path, vid_name, clip_size,
                  'num_labeled_strike': tot_strike,
                  'num_labeled_swim': tot_swim,
                  'total_clips': tot_swim + tot_strike, 'execution_time': execution_time}
-    log_df = log_df.append(entry, ignore_index=True)
+    log_df = pd.concat([log_df, pd.DataFrame([entry])],axis=0, ignore_index=True)
     log_df.to_csv(log_path, index=False)
     print(log_path)
     print(execution_time)
     vid.release()
 
-def get_file_list(dir_to_scan, vid_extension, custom_file_list=[]):
+def get_file_list(dir_to_scan, vid_extension, custom_file_list=[],vid_prefix='Seq'):
     file_list = []
-    ls =  np.hstack(custom_file_list.values)
+    if len(custom_file_list)>0:
+        ls = np.hstack(custom_file_list.values)
+    else:
+        ls = []
     #ls = [l.lower() for l in ls]
     #print(ls)
     #assert(False)
     for root, dirs, files in os.walk(dir_to_scan):
         for file in files:
-            if file.endswith(vid_extension) & file.startswith('Seq') & ('cali' not in file.lower()):
-                if (len(custom_file_list)==0) or (file.split('.')[0] in ls):
+            if file.endswith(vid_extension) & file.startswith(vid_prefix) & ('cali' not in file.lower()):
+                if (len(custom_file_list) == 0) or (file.split('.')[0] in ls):
                     file_list.append(os.path.join(root,file))
     print(f'Found {len(file_list)} videos in directory')
     return file_list
@@ -312,7 +321,7 @@ if __name__ == '__main__':
     detector_path = './models/detector.pth'
     cfg_path = args.cfg_path
     classifier_path = f'./models/{args.classifier_name}.pt'
-    detector, cfg_detect = load_detector(detector_path, confidence=0.5, nms=0.3)
+    detector, cfg_detect = load_detector(detector_path, confidence=0.5, nms=0.3) #these confidence and nms settings worked for us worth playing around with
     classifier, cfg_classify = load_action_classifier(cfg_path, classifier_path, pytorchvideo=True)
 
     if vid_name != 'all':
@@ -338,7 +347,7 @@ if __name__ == '__main__':
         else:
             custom_file_list = []
         print(len(custom_file_list))
-        file_list = get_file_list(video_folder, args.vid_ext, custom_file_list)
+        file_list = get_file_list(video_folder, args.vid_ext, custom_file_list, vid_prefix=args.vid_prefix)
         print(f'about to analyze {len(file_list)} videos')
             #file_list = [f for f in file_list if f in custom_file_list]
             #assert(len(file_list)==len(custom_file_list)), f'oops {len(file_list)} doesnt add up'
