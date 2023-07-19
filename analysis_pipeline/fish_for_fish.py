@@ -331,7 +331,9 @@ if __name__ == '__main__':
                 only_classify(root_experiment_folder, vid_path,
                           vid_name=vid_name, clip_size=args.clip_size, classifier=classifier, classifier_cfg=cfg_classify,
                         clip_duration=args.clip_duration,
-                        save_clips=not args.no_clips,thresh=args.dec_thresh, classifier_name=args.classifier_name)
+                        save_clips=not args.no_clips,
+                              thresh=args.dec_thresh,
+                              classifier_name=args.classifier_name)
             else:
                 fish_in_vid(root_experiment_folder, vid_path,
                           vid_name=vid_name, clip_size=args.clip_size,
@@ -342,7 +344,7 @@ if __name__ == '__main__':
             print(f'Video file not found in path {vid_path}')
     else:
 
-        if len(args.video_list_path)>0:
+        if len(args.video_list_path) > 0:
             custom_file_list = pd.read_csv(args.video_list_path)
         else:
             custom_file_list = []
