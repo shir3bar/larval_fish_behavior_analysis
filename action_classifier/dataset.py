@@ -24,7 +24,7 @@ from torchvision.transforms._transforms_video import (
     NormalizeVideo,
     RandomHorizontalFlipVideo,
 )
-from .transform import *
+from video_transforms import *
 import os
 from slowfast.datasets.build import DATASET_REGISTRY
 
