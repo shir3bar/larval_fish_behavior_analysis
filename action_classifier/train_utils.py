@@ -91,7 +91,7 @@ def train(cfg, model=None,pretrained=True, i3d=False, ssv2=False, val_every=5):
     #read config file:
     if type(cfg)==str:
         #cfg argument is a path, load it as cfg:
-        cfg = pirate_load_cfg(cfg_path)
+        cfg = pirate_load_cfg(cfg)
     print('starting train')
     #set random seeds
     np.random.seed(cfg.RNG_SEED)
