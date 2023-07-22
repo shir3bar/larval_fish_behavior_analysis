@@ -127,8 +127,11 @@ def get_split_results(model, cfg, split, epoch, plot=False, save=False,i3d=False
 
 
 
-def get_epoch_results(checkpoint_dir, epoch, cfg_path, plot=False,i3d=False):
-    cfg = pirate_load_cfg(cfg_path)
+def get_epoch_results(checkpoint_dir, epoch, cfg, plot=False,i3d=False):
+    #read config file:
+    if type(cfg)==str:
+        #cfg argument is a path, load it as cfg:
+        cfg = pirate_load_cfg(cfg)
     np.random.seed(cfg.RNG_SEED)
     torch.manual_seed(cfg.RNG_SEED)
     checkpoint_path = os.path.join(checkpoint_dir, f'pretrained_epoch{epoch}.pt')
@@ -144,8 +147,11 @@ def get_epoch_results(checkpoint_dir, epoch, cfg_path, plot=False,i3d=False):
     all_results.to_csv(results_path, index= False)
 
 
-def eval_alt_testset(checkpoint_dir,epoch,cfg_path,testset_path, plot=False, i3d=False):
-    cfg = pirate_load_cfg(cfg_path)
+def eval_alt_testset(checkpoint_dir,epoch,cfg,testset_path, plot=False, i3d=False):
+    #read config file:
+    if type(cfg)==str:
+        #cfg argument is a path, load it as cfg:
+        cfg = pirate_load_cfg(cfg)
     np.random.seed(cfg.RNG_SEED)
     torch.manual_seed(cfg.RNG_SEED)
     checkpoint_path = os.path.join(checkpoint_dir, f'pretrained_epoch{epoch}.pt')

@@ -19,11 +19,11 @@ if __name__=='__main__':
     if args.alt_testset_dir is None:
         # evaluate the model on the original train/val/test splits
         get_epoch_results(checkpoint_dir=args.checkpoint_dir,
-                          epoch=args.epoch, cfg_path=args.cfg,
+                          epoch=args.epoch, cfg=args.cfg,
                           plot=args.plot, i3d=args.i3d)
     else:
         # evaluate on a different dataset, we assume it has one partition called 'test'
         eval_alt_testset(checkpoint_dir=args.checkpoint_dir,
-                          epoch=args.epoch, cfg_path=args.cfg,
+                          epoch=args.epoch, cfg=args.cfg,
                          testset_path=args.alt_testset_dir,
                          plot=args.plot, i3d=args.i3d)
