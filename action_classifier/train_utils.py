@@ -75,7 +75,7 @@ def load_model(cfg,pretrained=False,i3d=False,ssv2=False):
     if ssv2:
         # load ssv2 pretrained model, note you need to download the checkpoint to the checkpoints/ssv2_pretrained folder
         #os.system('wget https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/ssv2/SLOWFAST_8x8_R50.pyth')
-        ckpt_path = './checkpoints/ssv2_pretrained/SLOWFAST_8x8_R50.pyth'
+        ckpt_path = './checkpoints/ssv2_pretrained.pyth'
         assert os.path.exists(ckpt_path), print('Oops! SSv2 pretrained model checkpoint not found (see readme)')
         tmp_cfg = cfg.clone()
         tmp_cfg.MODEL.NUM_CLASSES = 174 # change the number of classes to load the checkpoint
