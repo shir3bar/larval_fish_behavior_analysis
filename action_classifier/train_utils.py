@@ -51,8 +51,9 @@ def train_one_epoch(model, optim, loader_train, loss_func,cfg, i3d=False,calc_st
     all_labels = torch.hstack(all_labels)
     y_hats = torch.stack(y_hats).ravel()
     if calc_stats:
-        tn, fp, fn, tp = confusion_matrix(1 - all_labels.cpu(),
-                                          1 - y_hats.cpu()).ravel()  # since feed is label 0 and we want it as label 1,
+        tn, fp, fn, tp = confusion_matrix(all_labels.cpu(), y_hats.cpu()).ravel() #fixed the feed issue by renaming folders
+        #tn, fp, fn, tp = confusion_matrix(1 - all_labels.cpu(),
+        #                                  1 - y_hats.cpu()).ravel()  # since feed is label 0 and we want it as label 1,
         train_stats['loss'] = train_loss
         train_stats['fns'] = fn
         train_stats['fps'] = fp
