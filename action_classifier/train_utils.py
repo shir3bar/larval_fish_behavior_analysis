@@ -66,6 +66,7 @@ def train_one_epoch(model, optim, loader_train, loss_func,cfg, i3d=False,calc_st
     return model, optim, train_stats, all_labels, y_hats
 
 def load_model(cfg,pretrained=False,i3d=False,ssv2=False):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     if i3d:
         model_name = "i3d_r50"
         lin_features = 2048
@@ -83,9 +84,8 @@ def load_model(cfg,pretrained=False,i3d=False,ssv2=False):
         tmp_cfg.MODEL.NUM_CLASSES = 174 # change the number of classes to load the checkpoint
         model = load_checkpoint(ckpt_path, tmp_cfg)
     else:
-        model = torch.hub.load("facebookresearch/pytorchvideo:main", model=model_name, pretrained=pretrained)
+        model = torch.hub.load("facebookresearch/pytorchvideo:main", model=model_name, pretrained=pretrained,map_location=device)
     model.blocks[6].proj = torch.nn.Linear(in_features=lin_features, out_features=cfg.MODEL.NUM_CLASSES)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
     return model
 
