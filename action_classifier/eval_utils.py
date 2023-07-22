@@ -82,7 +82,7 @@ def eval_epoch(model, loader, cfg, i3d=False):
         y_hats = torch.hstack(y_hats)
         all_preds = torch.vstack(all_preds)
 
-        tn, fp, fn, tp = confusion_matrix(1 - all_labels.cpu(), 1 - y_hats.cpu()).ravel()
+        tn, fp, fn, tp = confusion_matrix(all_labels.cpu(), y_hats.cpu()).ravel()#confusion_matrix(1 - all_labels.cpu(), 1 - y_hats.cpu()).ravel()
         stats['fns'] = fn
         stats['fps'] = fp
         stats['tns'] = tn
@@ -114,9 +114,11 @@ def get_split_results(model, cfg, split, epoch, plot=False, save=False,i3d=False
     labels, y_hats, stats, preds, file_names = eval_epoch(model, loader, cfg)
     results_df = pd.DataFrame({'split':[split]* len(file_names), 'file_name': file_names,
                                      'strike_scores': preds[:, 0].cpu(),
-                                     'strike_labels': 1 - (labels).cpu()})
+                                     'strike_labels': labels.cpu()})
+                                     #'strike_labels': 1 - (labels).cpu()})
     if plot:
-        targets = 1 - labels.cpu() # we want the strike class to be positive
+        #targets = 1 - labels.cpu() # we want the strike class to be positive
+        targets = labels.cpu()#fixed this by renaming folders so that 0 is swim and 1 is strike
         preds = preds[:, 0].cpu()
         other_stats = get_stats(targets, preds)
         plot_roc_precision_recall(other_stats, split, epoch, save_dir=cfg.OUTPUT_DIR)
