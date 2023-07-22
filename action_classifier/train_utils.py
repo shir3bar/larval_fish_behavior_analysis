@@ -172,9 +172,21 @@ def train(cfg, model=None,pretrained=True, i3d=False, ssv2=False, val_every=5):
             )
             print(f'Val F1 {val_stats["f1"]:.2f}, acc {val_stats["accuracy"]:.2f}, recall {val_stats["recall"]:.2f}')
 
+            torch.save({'model_state': model.state_dict(), 'optimizer_state': optimizer.state_dict(),
+                        'train_losses': train_losses,
+                        'train_labels': train_labels,
+                        'train_y_hats': train_y_hats,
+                        'val_labels': val_labels,
+                        'val_y_hats': val_y_hats,
+                        'scheduler_state': scheduler.state_dict(),
+                        'train_stats': train_stats,
+                        #'train_eval_stats': train_eval_stats,
+                        'val_stats': val_stats},
+                    os.path.join(exp_dir, 'checkpoints', f'pretrained_epoch{cur_epoch}.pt'))
 
 
-        torch.save({'model_state': model.state_dict(), 'optimizer_state': optimizer.state_dict(),
+
+    torch.save({'model_state': model.state_dict(), 'optimizer_state': optimizer.state_dict(),
                     'train_losses': train_losses,
                     'train_labels': train_labels,
                     'train_y_hats': train_y_hats,
@@ -187,6 +199,7 @@ def train(cfg, model=None,pretrained=True, i3d=False, ssv2=False, val_every=5):
                    os.path.join(exp_dir, 'checkpoints', f'pretrained_epoch{cur_epoch}.pt'))
     if writer is not None:
         writer.close()
-    with open(os.path.join(exp_dir,'cfg.yaml'),'w') as f:
+    
+    #with open(os.path.join(exp_dir,'cfg.yaml'),'w') as f:
         # save training cfg in experiment folder
-        yaml.dump(cfg,f, default_flow_style=False)
+     #   yaml.dump(cfg,f, default_flow_style=True)
