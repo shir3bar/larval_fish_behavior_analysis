@@ -92,11 +92,11 @@ def eval_epoch(model, loader, cfg, i3d=False):
     return all_labels, y_hats, stats, all_preds, all_file_names
 
 def load_checkpoint(path,cfg):
-    checkpoint = torch.load(path)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    checkpoint = torch.load(path, map_location=device)
     model = torch.hub.load("facebookresearch/pytorchvideo:main", model="slowfast_r50", pretrained=False)
     model.blocks[6].proj = torch.nn.Linear(in_features=2304, out_features=cfg.MODEL.NUM_CLASSES)
     model.load_state_dict(checkpoint['model_state'])
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
     return model
 

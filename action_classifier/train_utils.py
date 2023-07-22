@@ -84,7 +84,7 @@ def load_model(cfg,pretrained=False,i3d=False,ssv2=False):
         tmp_cfg.MODEL.NUM_CLASSES = 174 # change the number of classes to load the checkpoint
         model = load_checkpoint(ckpt_path, tmp_cfg)
     else:
-        model = torch.hub.load("facebookresearch/pytorchvideo:main", model=model_name, pretrained=pretrained,map_location=device)
+        model = torch.hub.load("facebookresearch/pytorchvideo:main", model=model_name, pretrained=pretrained)
     model.blocks[6].proj = torch.nn.Linear(in_features=lin_features, out_features=cfg.MODEL.NUM_CLASSES)
     model.to(device)
     return model
