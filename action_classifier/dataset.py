@@ -1,3 +1,8 @@
+import os
+import sys
+
+file_dir = os.path.dirname(__file__)
+sys.path.append(file_dir)
 import random
 import cv2
 import torch
@@ -24,8 +29,8 @@ from torchvision.transforms._transforms_video import (
     NormalizeVideo,
     RandomHorizontalFlipVideo,
 )
-from .transform import *
-import os
+from video_transforms import *
+ 
 from slowfast.datasets.build import DATASET_REGISTRY
 
 def div255(x):

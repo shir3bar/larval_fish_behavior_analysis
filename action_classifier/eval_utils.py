@@ -82,7 +82,7 @@ def eval_epoch(model, loader, cfg, i3d=False):
         y_hats = torch.hstack(y_hats)
         all_preds = torch.vstack(all_preds)
 
-        tn, fp, fn, tp = confusion_matrix(1 - all_labels.cpu(), 1 - y_hats.cpu()).ravel()
+        tn, fp, fn, tp = confusion_matrix(all_labels.cpu(), y_hats.cpu()).ravel()#confusion_matrix(1 - all_labels.cpu(), 1 - y_hats.cpu()).ravel()
         stats['fns'] = fn
         stats['fps'] = fp
         stats['tns'] = tn
@@ -92,11 +92,11 @@ def eval_epoch(model, loader, cfg, i3d=False):
     return all_labels, y_hats, stats, all_preds, all_file_names
 
 def load_checkpoint(path,cfg):
-    checkpoint = torch.load(path)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    checkpoint = torch.load(path, map_location=device)
     model = torch.hub.load("facebookresearch/pytorchvideo:main", model="slowfast_r50", pretrained=False)
     model.blocks[6].proj = torch.nn.Linear(in_features=2304, out_features=cfg.MODEL.NUM_CLASSES)
     model.load_state_dict(checkpoint['model_state'])
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
     return model
 
@@ -114,9 +114,11 @@ def get_split_results(model, cfg, split, epoch, plot=False, save=False,i3d=False
     labels, y_hats, stats, preds, file_names = eval_epoch(model, loader, cfg)
     results_df = pd.DataFrame({'split':[split]* len(file_names), 'file_name': file_names,
                                      'strike_scores': preds[:, 0].cpu(),
-                                     'strike_labels': 1 - (labels).cpu()})
+                                     'strike_labels': labels.cpu()})
+                                     #'strike_labels': 1 - (labels).cpu()})
     if plot:
-        targets = 1 - labels.cpu() # we want the strike class to be positive
+        #targets = 1 - labels.cpu() # we want the strike class to be positive
+        targets = labels.cpu()#fixed this by renaming folders so that 0 is swim and 1 is strike
         preds = preds[:, 0].cpu()
         other_stats = get_stats(targets, preds)
         plot_roc_precision_recall(other_stats, split, epoch, save_dir=cfg.OUTPUT_DIR)
@@ -127,8 +129,11 @@ def get_split_results(model, cfg, split, epoch, plot=False, save=False,i3d=False
 
 
 
-def get_epoch_results(checkpoint_dir, epoch, cfg_path, plot=False,i3d=False):
-    cfg = pirate_load_cfg(cfg_path)
+def get_epoch_results(checkpoint_dir, epoch, cfg, plot=False,i3d=False):
+    #read config file:
+    if type(cfg)==str:
+        #cfg argument is a path, load it as cfg:
+        cfg = pirate_load_cfg(cfg)
     np.random.seed(cfg.RNG_SEED)
     torch.manual_seed(cfg.RNG_SEED)
     checkpoint_path = os.path.join(checkpoint_dir, f'pretrained_epoch{epoch}.pt')
@@ -144,8 +149,11 @@ def get_epoch_results(checkpoint_dir, epoch, cfg_path, plot=False,i3d=False):
     all_results.to_csv(results_path, index= False)
 
 
-def eval_alt_testset(checkpoint_dir,epoch,cfg_path,testset_path, plot=False, i3d=False):
-    cfg = pirate_load_cfg(cfg_path)
+def eval_alt_testset(checkpoint_dir,epoch,cfg,testset_path, plot=False, i3d=False):
+    #read config file:
+    if type(cfg)==str:
+        #cfg argument is a path, load it as cfg:
+        cfg = pirate_load_cfg(cfg)
     np.random.seed(cfg.RNG_SEED)
     torch.manual_seed(cfg.RNG_SEED)
     checkpoint_path = os.path.join(checkpoint_dir, f'pretrained_epoch{epoch}.pt')

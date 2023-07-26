@@ -51,8 +51,9 @@ def train_one_epoch(model, optim, loader_train, loss_func,cfg, i3d=False,calc_st
     all_labels = torch.hstack(all_labels)
     y_hats = torch.stack(y_hats).ravel()
     if calc_stats:
-        tn, fp, fn, tp = confusion_matrix(1 - all_labels.cpu(),
-                                          1 - y_hats.cpu()).ravel()  # since feed is label 0 and we want it as label 1,
+        tn, fp, fn, tp = confusion_matrix(all_labels.cpu(), y_hats.cpu()).ravel() #fixed the feed issue by renaming folders
+        #tn, fp, fn, tp = confusion_matrix(1 - all_labels.cpu(),
+        #                                  1 - y_hats.cpu()).ravel()  # since feed is label 0 and we want it as label 1,
         train_stats['loss'] = train_loss
         train_stats['fns'] = fn
         train_stats['fps'] = fp
@@ -65,6 +66,7 @@ def train_one_epoch(model, optim, loader_train, loss_func,cfg, i3d=False,calc_st
     return model, optim, train_stats, all_labels, y_hats
 
 def load_model(cfg,pretrained=False,i3d=False,ssv2=False):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     if i3d:
         model_name = "i3d_r50"
         lin_features = 2048
@@ -74,8 +76,9 @@ def load_model(cfg,pretrained=False,i3d=False,ssv2=False):
 
     if ssv2:
         # load ssv2 pretrained model, note you need to download the checkpoint to the checkpoints/ssv2_pretrained folder
-        #os.system('wget https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/ssv2/SLOWFAST_8x8_R50.pyth')
-        ckpt_path = './checkpoints/ssv2_pretrained/SLOWFAST_8x8_R50.pyth'
+        #os.system('!wget -O /content/larval_fish_behavior_analysis/action_classifier/checkpoints/ssv2_pretrained.pyth https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/ssv2/SLOWFAST_8x8_R50.pyth')
+        curr_path=os.path.split(os.path.realpath(__file__))[0]
+        ckpt_path = os.path.join(curr_path,'checkpoints','ssv2_pretrained.pyth')
         assert os.path.exists(ckpt_path), print('Oops! SSv2 pretrained model checkpoint not found (see readme)')
         tmp_cfg = cfg.clone()
         tmp_cfg.MODEL.NUM_CLASSES = 174 # change the number of classes to load the checkpoint
@@ -83,7 +86,6 @@ def load_model(cfg,pretrained=False,i3d=False,ssv2=False):
     else:
         model = torch.hub.load("facebookresearch/pytorchvideo:main", model=model_name, pretrained=pretrained)
     model.blocks[6].proj = torch.nn.Linear(in_features=lin_features, out_features=cfg.MODEL.NUM_CLASSES)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
     return model
 
@@ -91,7 +93,7 @@ def train(cfg, model=None,pretrained=True, i3d=False, ssv2=False, val_every=5):
     #read config file:
     if type(cfg)==str:
         #cfg argument is a path, load it as cfg:
-        cfg = pirate_load_cfg(cfg_path)
+        cfg = pirate_load_cfg(cfg)
     print('starting train')
     #set random seeds
     np.random.seed(cfg.RNG_SEED)
@@ -143,11 +145,11 @@ def train(cfg, model=None,pretrained=True, i3d=False, ssv2=False, val_every=5):
             writer.add_scalars(
                 {
                     "Train/epoch_loss": train_stats['loss'],
-                    "Train/epoch_top1_err": train_stats['top1_err'],
+                    #"Train/epoch_top1_err": train_stats['top1_err'],
                     #"Train_eval/epoch_top1_err": train_eval_stats['top1_err'],
                     "Train/epoch_accuracy": train_stats['accuracy'],
-                    "Train/epoch_precision": train_stats['precision'],
-                    "Train/epoch_recall": train_stats['recall']
+                    #"Train/epoch_precision": train_stats['precision'],
+                    #"Train/epoch_recall": train_stats['recall']
                 },
                 global_step=cur_epoch,
             )
@@ -171,9 +173,21 @@ def train(cfg, model=None,pretrained=True, i3d=False, ssv2=False, val_every=5):
             )
             print(f'Val F1 {val_stats["f1"]:.2f}, acc {val_stats["accuracy"]:.2f}, recall {val_stats["recall"]:.2f}')
 
+            torch.save({'model_state': model.state_dict(), 'optimizer_state': optimizer.state_dict(),
+                        'train_losses': train_losses,
+                        'train_labels': train_labels,
+                        'train_y_hats': train_y_hats,
+                        'val_labels': val_labels,
+                        'val_y_hats': val_y_hats,
+                        'scheduler_state': scheduler.state_dict(),
+                        'train_stats': train_stats,
+                        #'train_eval_stats': train_eval_stats,
+                        'val_stats': val_stats},
+                    os.path.join(exp_dir, 'checkpoints', f'pretrained_epoch{cur_epoch}.pt'))
 
 
-        torch.save({'model_state': model.state_dict(), 'optimizer_state': optimizer.state_dict(),
+
+    torch.save({'model_state': model.state_dict(), 'optimizer_state': optimizer.state_dict(),
                     'train_losses': train_losses,
                     'train_labels': train_labels,
                     'train_y_hats': train_y_hats,
@@ -186,6 +200,7 @@ def train(cfg, model=None,pretrained=True, i3d=False, ssv2=False, val_every=5):
                    os.path.join(exp_dir, 'checkpoints', f'pretrained_epoch{cur_epoch}.pt'))
     if writer is not None:
         writer.close()
-    with open(os.path.join(exp_dir,'cfg.yaml'),'w') as f:
+    
+    #with open(os.path.join(exp_dir,'cfg.yaml'),'w') as f:
         # save training cfg in experiment folder
-        yaml.dump(cfg,f, default_flow_style=False)
+     #   yaml.dump(cfg,f, default_flow_style=True)
