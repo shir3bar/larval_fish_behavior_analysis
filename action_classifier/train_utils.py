@@ -89,7 +89,7 @@ def load_model(cfg,pretrained=False,i3d=False,ssv2=False):
     model.to(device)
     return model
 
-def train(cfg, model=None,pretrained=True, i3d=False, ssv2=False, val_every=5):
+def train(cfg, model=None,pretrained=True, i3d=False, ssv2=False):
     #read config file:
     if type(cfg)==str:
         #cfg argument is a path, load it as cfg:
@@ -98,6 +98,8 @@ def train(cfg, model=None,pretrained=True, i3d=False, ssv2=False, val_every=5):
     #set random seeds
     np.random.seed(cfg.RNG_SEED)
     torch.manual_seed(cfg.RNG_SEED)
+    val_every = cfg.TRAIN.EVAL_PERIOD
+    save_every = cfg.TRAIN.CHECKPOINT_PERIOD
     #get data loaders:
     loader_train = construct_loader(cfg, 'train')
     loader_val = construct_loader(cfg, 'val')
@@ -172,7 +174,7 @@ def train(cfg, model=None,pretrained=True, i3d=False, ssv2=False, val_every=5):
                 global_step=cur_epoch,
             )
             print(f'Val F1 {val_stats["f1"]:.2f}, acc {val_stats["accuracy"]:.2f}, recall {val_stats["recall"]:.2f}')
-
+        if cur_epoch % save_every == 0:
             torch.save({'model_state': model.state_dict(), 'optimizer_state': optimizer.state_dict(),
                         'train_losses': train_losses,
                         'train_labels': train_labels,
