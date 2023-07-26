@@ -145,11 +145,11 @@ def train(cfg, model=None,pretrained=True, i3d=False, ssv2=False, val_every=5):
             writer.add_scalars(
                 {
                     "Train/epoch_loss": train_stats['loss'],
-                    "Train/epoch_top1_err": train_stats['top1_err'],
+                    #"Train/epoch_top1_err": train_stats['top1_err'],
                     #"Train_eval/epoch_top1_err": train_eval_stats['top1_err'],
                     "Train/epoch_accuracy": train_stats['accuracy'],
-                    "Train/epoch_precision": train_stats['precision'],
-                    "Train/epoch_recall": train_stats['recall']
+                    #"Train/epoch_precision": train_stats['precision'],
+                    #"Train/epoch_recall": train_stats['recall']
                 },
                 global_step=cur_epoch,
             )
