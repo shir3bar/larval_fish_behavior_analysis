@@ -113,13 +113,13 @@ def get_split_results(model, cfg, split, epoch, plot=False, save=False,i3d=False
         loader = construct_loader(cfg,split)
     labels, y_hats, stats, preds, file_names = eval_epoch(model, loader, cfg)
     results_df = pd.DataFrame({'split':[split]* len(file_names), 'file_name': file_names,
-                                     'strike_scores': preds[:, 0].cpu(),
+                                     'strike_scores': preds[:, 1].cpu(),# strike has a label of 1 so column is 1
                                      'strike_labels': labels.cpu()})
                                      #'strike_labels': 1 - (labels).cpu()})
     if plot:
         #targets = 1 - labels.cpu() # we want the strike class to be positive
         targets = labels.cpu()#fixed this by renaming folders so that 0 is swim and 1 is strike
-        preds = preds[:, 0].cpu()
+        preds = preds[:, 1].cpu() # strike has a label of 1 so column is 1
         other_stats = get_stats(targets, preds)
         plot_roc_precision_recall(other_stats, split, epoch, save_dir=cfg.OUTPUT_DIR)
     if save:
