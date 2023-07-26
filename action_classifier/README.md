@@ -4,7 +4,7 @@ using the [pySlowFast](https://github.com/facebookresearch/SlowFast/)
 and [Pytorchvideo](https://pytorchvideo.org/) frameworks. <br>
 More nitty gritty details of ablation studies can be found [here](https://www.biorxiv.org/content/10.1101/2022.11.14.516417v1.abstract).
 
-**Soon** Colab notebook.
+If you want to try the code without installation hassles try this [Colab notebook](./Train_action_classifier.ipynb).
 
 ### Getting started
 This code was test on Ubuntu 20.04 LTS and requires:
@@ -41,9 +41,9 @@ dataset_folder
     └── swim
 ```
 Our training dataset, structured as above, can be downloaded 
-[here](https://drive.google.com/file/d/1EGfK6TYwLQRVC8WCD9hZCGlKpjquPetp/) [@@GB].
+[here](https://drive.google.com/open?id=1HRHSlyNn7QrczMqEmqH2UHRXKwSsOhrS).
 Our extended test set, used for further evaluation of classifiers under more challenging conditions, 
-can be downloaded [here](https://drive.google.com/file/d/1--pFy4Oo9MVdzkk9r6sZ6wB0Os5o5AYZ/) [@@GB].
+can be downloaded [here](https://drive.google.com/open?id=196CT-FqsH9EpEuLbffzytRFfFpJuaAKc).
 
 ### Custom dataset
 Our code uses pytorchvideo's `labeleddatapath` function and can thus be used with other binary classification
