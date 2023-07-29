@@ -14,17 +14,8 @@ This code was test on Ubuntu 20.04 LTS and requires:
 It is also highly recommended to use conda or another virtual environment manager.
 We will also provide a Colab notebook for those who would like to try out the code/models without the setup hassle.
 
-### Setup with Conda
-```commandline
-git clone https://github.com/shir3bar/larval_fish_behavior_analysis
-cd larval_fish_behavior_analysis
-
-conda env create -f environment_ubuntu.yml
-conda activate larvaeAction
-```
-
-Note a different installation of Pytorch maybe necessary, depending on CUDA version.
-**Soon:** see INSTALL.md for different setup approach.
+### Setup 
+See [INSTALL.md](./INSTALL.md) for instructions.
 
 ### Data structure
 ```
