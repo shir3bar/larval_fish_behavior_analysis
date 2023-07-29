@@ -4,7 +4,7 @@ using the [pySlowFast](https://github.com/facebookresearch/SlowFast/)
 and [Pytorchvideo](https://pytorchvideo.org/) frameworks. <br>
 More nitty gritty details of ablation studies can be found [here](https://www.biorxiv.org/content/10.1101/2022.11.14.516417v1.abstract).
 
-If you want to try the code without installation hassles try this [Colab notebook](./Train_action_classifier.ipynb).
+If you want to try the code without installation hassles try this [Colab notebook]( https://colab.research.google.com/github/shir3bar/larval_fish_behavior_analysis/blob/main/action_classifier/Train_action_classifier.ipynb).
 
 ### Getting started
 This code was test on Ubuntu 20.04 LTS and requires:
