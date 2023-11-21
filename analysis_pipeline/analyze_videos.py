@@ -200,7 +200,7 @@ if __name__ == '__main__':
         assert len(file_list)>0, \
             "Oops! video folder doesn't seem to have any of the experiment videos, check get_all_vids_dict()"
         for curr_path in file_list:
-            curr_vid = os.path.basename(curr_path).split('.')[0]
+            curr_vid = os.path.basename(curr_path).strip(args.vid_ext)
             print(f'Vid {curr_vid} at work')
             analyze_vid(root_experiment_folder, curr_path,
                           vid_name=curr_vid, clip_size=args.clip_size,
