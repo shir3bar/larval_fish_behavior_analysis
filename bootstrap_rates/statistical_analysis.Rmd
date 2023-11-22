@@ -1,0 +1,425 @@
+---
+title: "Statistical analysis of measured larvael feeding strike rates"
+output: html_document
+date: "2023-10-23"
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##    Introduction
+This is an R Markdown to reproduce the statiscal analyses performed in: </br> 
+Bar, S., L. Levy, S. Avidan, and R. Holzman. </br>
+*Assessing the determinants of larval fish strike
+rates using computer vision.* </br>
+Ecological Informatics 77 (2023), 102195.
+https://doi.org/10.1016/j.ecoinf.2023.102195
+
+The aim of our analyses is: 
+  a. To ascertain that we sampled sufficiently in order to accurately characterize the larval strike rates.
+  b. To asses the effect of environmental factors (temperature, $O_2$ saturation and pH level) on these rates.
+
+Our data consist in estimations of larval feeding strike rates from 5-minute long high-speed (500 frames-per-second) video sequences captured in aquaculture rearing pools. 
+The videos capture the natural variance of the rearing pool environment, featuring varying densities of fish, prey and water turbidity. Additional variance is introduced by differences in the filming setup and lighting between each filming session.
+
+Larval feeding strike rates were estimated using an AI-assisted pipeline based on detection followed by action classification. The pipeline was applied in a sliding window manner throughout 223 videos from 17 different cohorts.
+Estimating these rates is difficult since these behaviors are extremely sparse - the number of observed strikes was low (on average, less then one per video). 
+Furthermore, since our pipeline performance far surpassed that of a human annotator (finding twice as many events in the same sequences), we cannot be sure what is the "ground truth" strike rate. To asses whether we sampled sufficiently to accurately we performed a bootstrap.
+
+To estimate how the variable environment of the rearing pool effected estimated rates, we used a zero-inflated negative binomial to model the rate estimates (per fish per hour) as a function of temperature, $O_2$ and pH as measured in the pools during filming.
+
+Below you'll find code for the bootstrap followed by the models. All data used in these analyses is free to download from our GitHub repo.
+
+## Bootstrap
+
+We'll first load some necessary libraries and define some functions that will be used down the line.
+<details>--<summary><font color='darkpink'>Some libraries and custom functions</font></summary>
+```{r load libraries and functions, message = FALSE, warning = FALSE}
+library(data.table)
+library(dplyr)
+library(pscl) #for zero-inflated models
+library(RColorBrewer)
+library(visreg)
+library(ggplot2)
+library(ggeffects)
+
+# utility funcs
+get_segment_indices = function(fps,sample_duration,seg_length=20,start_frame=0){
+  #seg length in seconds
+  step_size = seg_length*fps
+  starts = seq(start_frame,sample_duration,step_size)
+  ends = starts+step_size
+  last = sample_duration - starts[[length(starts)]]
+  ends[[length(ends)]] = sample_duration
+  return(list(starts, ends))
+}
+
+get_rate_estimate = function(data_df,vidname,start_frame, end_frame, fps) {
+  vid_sub = data_df %>%
+    filter(vid_name==vidname &  (frame)<=(end_frame) & (frame)>(start_frame)) %>%
+    filter(slowfast_ssv2pretrain_epoch49_strike_scores>0.75)%>%
+    filter(!is_double)
+  #clips create from frame_num+40 might also include frame number frame num
+  duration = (end_frame-start_frame)/fps/60#calculate the duration in minutes
+  num_events = sum(vid_sub$reviewer_label=='Strike')
+  stats = list('num_events'=num_events, 'duration'=duration)
+  return(stats)
+}
+
+# get zero inflated model for bootstrap:
+get_model <- function(sampled.data){
+  m <- tryCatch(withCallingHandlers(zeroinfl(sr~age_group|mean_dens,dist='negbin', data=sampled.data),
+                error=function(cond){
+                  message(paste('The following sample size was too zero-ie', 
+                                nrow(sampled.data)))
+                  #message(paste('The sum of sr was', sum(sampled.data$sr)))
+                  #message(cond)
+                  return(NA)
+                },
+                warning=function(cond){
+                  #message('fit hit an issue')
+                  message(paste('fit issue sample size was',
+                                nrow(sampled.data)))
+                  #message(paste('The sum of sr was', sum(sampled.data$sr)))
+                  #invokeRestart("muffleWarning")
+                  return(NA)
+                  #return(suppressWarnings(zeroinfl(sr~age_group|mean_dens,dist='negbin', data=sampled.data)))
+                }
+                ), error = function(e){return(NA)})
+  return(m)
+}
+
+# Sample segments summing to a specified duration making sure all age groups are represented:
+get_sampled = function(df, time){
+  not.four = T
+  while(not.four){
+    inds = sample(seq(1,nrow(df)),time,replace = T)
+    sampled = df[inds,c('num_events','duration','mean_dens','rate','age_group')]
+    not.four = length(unique(sampled$age_group))!=4
+  }
+  return(sampled)
+}
+```
+</details>
+
+For the bootstrap, we divide frames from all videos analyzed into 30 sec segments which we'll later sample to achieve a specified duration in the bootstrap, and calculate the fish strike rates in this period. 
+First we'll create a table with these segments and count the number of strike events per segment.
+To do this we need as input the table with all pipeline outputs for all videos (detections per frame).
+```{r load some data and set the stage}
+
+# all predictions, each row is a clip:
+all_preds = read.csv('all_reviewed_preds_ssv_and_kinetics.csv', stringsAsFactors = T) 
+
+# metadata for each long untrimmed video sequence
+all_logs = read.csv('clean_imputed_video_metadata.csv', stringsAsFactors = T) #we use a clean version of the video log - we removed a problematic cohorts and very young/old ages that weren't sufficiently represented in the data. See the data cleaning and imputation section below
+
+# take only preds belonging to videos in the metadata
+filtered.all.preds = all_preds %>%
+  filter(vid_name %in% all_logs$video_name)
+
+# is double is a marker stating whether the same fish was viewed in two clips (clips are slightly overlapping temporally/spatially)
+all_preds$is_double = as.logical(all_preds$is_double)
+
+```
+
+```{r bootstrap prep - data segmentation}
+
+counter=0
+vid_names = unique(all_logs$video_name)
+# create a new dataframe for the segments:
+df = data.frame(vid_name=character(),
+                fps = integer(),
+                first_frame=integer(),
+                last_frame=integer(),
+                duration = double(),
+                num_events = integer(),
+                mean_density = double(),
+                rate = double()
+                )
+# calculate the segments:
+for (vidname in vid_names) {
+  # get video metadata :
+  fps = all_logs[all_logs$video_name==vidname,'fps']
+  sample_duration = floor(all_logs[all_logs$video_name==vidname, "last_frame_labeled"])
+  mean_density = all_logs[all_logs$video_name==vidname, "mean_detections_per_frame_20"]
+  start_frame = all_logs[all_logs$video_name==vidname,'start_frame']
+  age_group = all_logs[all_logs$video_name==vidname,'age_group']
+  
+  # get the segment indices (start and end frame for each segment):
+  seg_ind = get_segment_indices(fps, sample_duration, seg_length = 20, 
+                                start_frame=start_frame)
+  starts = seg_ind[[1]]
+  ends = seg_ind[[2]]
+  # iterate over all segments:
+  for(i in seq(1,length(starts))){
+    start = starts[[i]]
+    end = ends[[i]]
+    rate_stats = get_rate_estimate(all_preds,vidname, start, end, fps)
+    entry = list(vid_name=vidname,
+                fps = fps,
+                first_frame=start,
+                last_frame=end,
+                duration = rate_stats$duration,
+                num_events = rate_stats$num_events,
+                mean_dens = mean_density,
+                rate = rate_stats$num_events/(rate_stats$duration*mean_density),
+                age_group = age_group
+                )
+    df = rbind(df,entry)
+  }
+}
+
+write.csv(df,'test_segments_for_bootstrap.csv')
+
+```
+
+
+Using these segments we can now bootstrap the rates by randomly sampling these segments.
+We can then ask how will the rates change as a function of sampling efforts - will sampling more segments change the strike rate estimate?
+Initially we bootstrapped the raw event rates. However, since our data is severely zero-inflated, we have come to the conclusion that a better approach would be to bootstrap the rates estimates of zero-inflated model, one that takes into account the processes that might lead to false negatives resulting from low density and potential differences between age groups. So, instead of calculating the raw rates for each sample drawn, we simply use the sample to create a zero inflated negative binomial model of strike rate per hour per fish as a function of age group (counts, Negative Binomial part) and mean density (structural zeros, Bernoulli part).
+
+Note that running the bootstrap will take some time
+```{r bootstrap, message = FALSE, warning = FALSE, results='hide'}
+#all_logs = read.csv('all_reviewed_logs_ssv_and_kinetics_imputed_noF04_noyoung.csv')
+df =  read.csv('test_segments_for_bootstrap.csv', stringsAsFactors = T)
+df[which(is.na(df$rate)),'rate']=0 # deal with zero divided values
+# pre-define some variables:
+pop_size = 200# how many times to run the bootstrap
+# Note: for the paper I ran this with pop_size = 1000, however this takes a night to run (on a laptop)
+set.seed(42)
+times = seq(10,sum(df$duration),3)*3 #we multiply by 3 because each segment is 0.33333 min, we want round minutes so we need to sample more
+times = round(times)
+rates_pop =list()
+ci= list()
+groups = unique(df$age_group)
+# pre-assign some containers:
+for (counter in seq(1,length(groups))){
+  rates_pop[[counter]] = matrix(rep(0,pop_size*length(times)), nrow=length(times),ncol=pop_size)
+  ci[[counter]] = matrix(rep(NA, length(times)*2),ncol=2)
+}
+
+#loop through all durations of time to sample and run bootstrap pop_size times:
+for (t in seq(length(times),1,by=-1)){
+  print(t)
+  for (i in seq(1,pop_size)){
+    sampled = get_sampled(df,times[t]) # sample some segments
+    sampled$sr = round(60*(sampled$num_events/(sampled$duration*sampled$mean_dens)))#sr = strike rate per fish per second
+    sampled[which(is.na(sampled$sr)),'sr']=0
+    model = get_model(sampled) # get a zero-inflated model based on these sampleed segments
+    # get estimated rates from the model for each age group:
+    for (counter in seq(1,length(groups))){
+      if (length(is.na(model))>1){
+        # first age group is the intercept, other groups are coeff+intercept
+        if (counter!=1){
+          rate = model$coefficients[[1]][[1]]+model$coefficients[[1]][[counter]]
+          } else {
+            rate = model$coefficients[[1]][[1]]
+          }
+      } else { rate=NA }
+      # store rate in matrix:
+      rates_pop[[counter]][t,i] = rate
+      }
+  }
+  # calculate confidence intervals across the bootstrapped population:
+  for (counter in seq(1,length(groups))){ 
+    ci[[counter]][t,1:2] = quantile(rates_pop[[counter]][t,],probs=c(0.025,0.975),na.rm=T)
+  }
+}
+
+```
+
+
+
+
+
+Now that we have the bootstrap result let's summarize them and do some visualizations:
+
+```{r visualization}
+rates_pop_df = as.data.frame(do.call(rbind, rates_pop))
+cis = as.data.frame(do.call(rbind, ci))
+
+stat_df = data.frame(group=c(rep(levels(groups)[1],length(times)),
+                             rep(levels(groups)[2],length(times)),
+                             rep(levels(groups)[3],length(times)), 
+                             rep(levels(groups)[4],length(times))),
+                     time = times/3,
+                     mean_rate = rowMeans(rates_pop_df,na.rm = T),
+                     lower_ci = cis[,1],
+                     upper_ci = cis[,2])
+
+stat_df$group = as.factor(stat_df$group)
+
+# calculate the percent of the ci from the mean:
+
+stat_df=stat_df %>%
+  mutate(percent_mean_upper = (upper_ci-mean_rate)/mean_rate,
+         percent_mean_lower = ifelse(lower_ci>=0,(mean_rate-(lower_ci))/mean_rate,
+         (abs(lower_ci)-mean_rate)/mean_rate))%>%
+  mutate(mean_percent_mean = (percent_mean_upper+percent_mean_lower)/2)
+
+#get cuttoff for when ci arrives at 15% of the mean, for each age group:
+cutoffs_mean= list()
+cutoffs_upper= list()
+cutoffs_lower = list()
+ys = list()
+
+for (counter in seq(1,length(groups))){
+  sub_df = subset(stat_df, stat_df$group==levels(groups)[counter])
+  print(nrow(sub_df))
+  # we use a rolling mean to calculate the cutoffs to smooth out some of the noise
+  ind = which(frollmean(sub_df$mean_percent_mean,3)<=0.15)[1]
+  cutoffs_mean[[counter]] = rep(sub_df[ind,'time'],nrow(sub_df))
+  ind = which(frollmean(sub_df$percent_mean_upper,3)<=0.15)[1]
+  cutoffs_upper[[counter]] = rep(sub_df[ind,'time'],nrow(sub_df))
+  ind = which(frollmean(sub_df$percent_mean_lower,3)<=0.15)[1]
+  cutoffs_lower[[counter]] = rep(sub_df[ind,'time'],nrow(sub_df))
+  ys[[counter]] = seq(0,1.5,length.out=nrow(sub_df))
+}
+
+stat_df$cutoff_mean = do.call(c,cutoffs_mean)
+stat_df$cutoff_upper = do.call(c,cutoffs_upper)
+stat_df$cutoff_lower = do.call(c,cutoffs_lower)
+stat_df$y_for_percent = do.call(c,ys)
+
+
+# Aaaand plot:
+
+g = ggplot(data=stat_df)+geom_point(aes(x=time, y=mean_rate,color=group),alpha=0.4)+
+  geom_errorbar(aes(x=time, ymin=lower_ci, ymax=upper_ci,color=group),
+                width=0.25,alpha=0.45)+
+  # Add vertical line showing the sample duration above which CI is under 15% of the mean rate:
+  geom_vline(aes(xintercept=cutoff_mean),linetype='dashed') +
+  coord_cartesian(ylim=c(0,7))+
+  scale_color_brewer(palette='Spectral',name='age group')+
+  labs(x='time sampled [min]', y='mean strike rate [strikes/(hour*fish)]')+
+  theme_bw()+ 
+  theme(strip.background = element_blank(),text = element_text(size=14))+
+  facet_wrap(.~group,scales="free",nrow=1)
+
+# Save figure and bootstrapped rates (this is figure 4 is the paper):
+#ggsave('test_boot_by_group.pdf',plot=g,width = 11, height=5)
+#write.csv(stat_df, 'bootstrap_pop200.csv')
+g
+
+```
+
+
+## Environmental effects on strike rates
+
+### Data imputation and cleaning:
+For the statistical analysis on the effects of environmental factors we needed to to do some data cleaning and imputation of missing values. With data cleaning, we decided to remove ages below 8DPH and above 30DPH from analysis due to insufficient samples. 
+
+<details>--<summary><font color='darkpink'>Open all gory data imputation details</font></summary>
+```{r data cleaning, eval=FALSE}
+all_logs = read.csv('all_reviewed_logs_ssv_and_kinetics.csv')
+nrow(all_logs)
+# remove older ages:
+data = all_logs[-which(all_logs$DPH>30),]
+nrow(data)
+# and too young ages:
+data = data[-which(data$DPH<8),]
+nrow(data)
+# remove PH outliers, calc mean, impute all missing values and replace with mean
+values_to_remove = c(which(data$PH<=7.2),which(data$PH>=8.5))
+data[values_to_remove,'PH'] = NA
+# calc mean for both oxygen and PH
+mean.oxygen = mean(data$oxygen,na.rm=T)
+mean.PH = mean(data$PH,na.rm=T)
+# impute missing values:
+data[which(is.na(data$oxygen)),'oxygen'] = mean.oxygen
+data[which(is.na(data$PH)),'PH'] = mean.PH
+data$stat_strikes = (data$manual_strikes-data$manual_strikes_detected) + data$unique_strikes
+# calculate the strike rate per fish per **hour** (60*):
+sr = 60*data$stat_strikes/(data$mean_detections_per_frame_20*data$min_labeled)#60*data$unique_strikes_kinetics/(data$mean_detections_per_frame_20*data$min_labeled)
+data$sr = round(sr)
+nrow(data)
+data[which(is.na(data$sr)),'sr'] = 0
+#write.csv(data,'imputed_video_metadata_wF04.csv')
+nrow(data)
+data=data[-which(data$cohort=='F04'),] # remove data from this cohort as videos were jumpy due to frame grabber issues
+nrow(data)
+sum(data$manual_strikes-data$manual_strikes_detected+data$unique_strikes)
+sum(data$stat_strikes)
+#write.csv(data,'clean_imputed_video_metadata.csv')
+
+```
+</details>
+
+### Zero-inflated model
+Let's create the model:
+
+```{r zero-inflated model, warning=F, message=F}
+#for a nice printed table for the paper we used the stargazer library, it doesn't have any effect on the stats
+library(stargazer)
+data = read.csv('clean_imputed_video_metadata.csv')
+final.model = zeroinfl(sr~DPH+temp+oxygen+PH|mean_detections_per_frame_20,dist='negbin', data=data)#
+summary(final.model)
+#stargazer(final.model, zero.component = T) #uncomment this for the Latex table
+
+```
+
+Now let's create some visreg-style visualizations:
+
+```{r visreg-style plots}
+# define some essentials:
+visualization.model= zeroinfl(sr~age_group+temp+oxygen+PH|mean_detections_per_frame_20,dist='negbin', data=data)
+colors = brewer.pal(4,'Spectral')
+data$age_group = factor(data$age_group,levels=c("08-14",'15-20',"21-25",'26-30'))
+
+##### Temperature visreg: #####
+# setup a data frame for visreg, i.e., pH and oxygen should be at their median values and we're checking the effect of temperature on the strike rates
+new.data = data
+new.data = new.data[-which(is.na(new.data$temp)),]
+new.data$oxygen = median(data$oxygen)
+new.data$PH = median(data$PH)
+new.data$model.preds = predict(visualization.model,newdata = new.data) # get model predictions on this new data
+# use ggpredict for CIs:
+pred = ggpredict(visualization.model,type='zero_inflated',terms=c('temp','age_group')) 
+pred$group = factor(pred$group,levels=c("08-14",'15-20',"21-25",'26-30'))
+
+g = plot(pred,colors=colors)+#CIs
+  geom_point(data=new.data, inherit.aes=F,
+                      aes(x=temp,y=model.preds,color=age_group),size=2.5)+
+  theme_classic() +
+  labs(y='Predicted strike rates \n [strikes/(hour*fish)]', x='Temperature [\u00B0C]',title='')+theme(text=element_text(size=20))
+g
+##### Oxygen visreg: ####
+new.data = data
+new.data = new.data[-which(is.na(new.data$temp)),]
+new.data$temp = median(new.data$temp)
+new.data$PH = median(data$PH)
+new.data$model.preds = predict(visualization.model,newdata = new.data)
+# use ggpredict for CIs:
+pred = ggpredict(visualization.model,type='zero_inflated',terms=c('oxygen','age_group'))
+pred$group = factor(pred$group,levels=c("08-14",'15-20',"21-25",'26-30'))
+
+g = plot(pred,colors=colors)+
+  geom_point(data=new.data, inherit.aes=F,
+                      aes(x=oxygen,y=model.preds,color=age_group),size=2.5)+
+  theme_classic() +
+  labs(y='Predicted strike rates \n [strikes/(hour*fish)]',
+       x=expression(paste(O[2]," [%]",sep="")),title='')+
+  theme(text=element_text(size=20))
+g
+##### pH visreg: #####
+new.data = data
+new.data = new.data[-which(is.na(new.data$temp)),]
+new.data$temp = median(new.data$temp)
+new.data$oxygen = median(data$oxygen)
+new.data$model.preds = predict(visualization.model,newdata = new.data)
+# plot visreg:
+colors = brewer.pal(4,'Spectral')
+
+pred = ggpredict(visualization.model,type='zero_inflated',terms=c('PH','age_group'))
+pred$group = factor(pred$group,levels=c("08-14",'15-20',"21-25",'26-30'))
+#levels(pred$group) = c("08-14",'15-20',"21-25",'26-30')
+
+g = plot(pred,colors=colors)+
+  geom_point(data=new.data, inherit.aes=F,
+                      aes(x=PH,y=model.preds,color=age_group),size=2.5)+
+  theme_classic() +
+  labs(y='Predicted strike rates \n [strikes/(hour*fish)]', x='pH',title='')+
+  theme(text=element_text(size=20))
+g
+```
+
