@@ -41,6 +41,11 @@ def get_batch(clips):
     batch = [torch.stack(slow), torch.stack(fast)]
     return batch
 
+def get_batches(clips,batch_size=4):
+    batchs = []
+    for i in range(0,len(clips),batch_size):
+        batchs.append(get_batch(clips[i:i+batch_size]))
+    return batchs
 
 def get_action_classifications(model, clips, cfg, device, verbose=True, normalize=True, bbox_clip_sizes=False):
     transformed_clips = transform_clips(clips,cfg, normalize=normalize)
@@ -56,10 +61,11 @@ def get_action_classifications(model, clips, cfg, device, verbose=True, normaliz
         
         preds = torch.vstack(preds)
     else:
-        batch = get_batch(transformed_clips)
-        batch = [i.to(device) for i in batch]
-        with torch.no_grad():
-            preds = model(batch)
+        batchs = get_batches(transformed_clips,batch_size=1)
+        for batch in batchs:
+            batch = [i.to(device) for i in batch]
+            with torch.no_grad():
+                preds = model(batch)
     # Get the predicted classes
     post_act = torch.nn.Softmax(dim=1)
     preds = post_act(preds)
