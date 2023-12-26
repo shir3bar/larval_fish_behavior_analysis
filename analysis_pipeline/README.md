@@ -24,7 +24,7 @@ cd ./analysis_pipeline
 ```
 
 ### Models
-Download our trained models for this pipeline [here](https://drive.google.com/open?id=1yxH-69Qd1w0-bfyjRpa32NHBhXbcJmXT) and place them in the `./models` folder for the code to work. **OR** place your own custom-trained models in this folder.
+Download our trained models for this pipeline [here](https://drive.google.com/file/d/17z7BdSeJnSxhfRfKU29Ga-V4artOSbtA) and place them in the `./models` folder for the code to work. **OR** place your own custom-trained models in this folder.
 We wrote the code to work with the Detectron2 and Pytorchvideo libraries, if you're using something different you'll have to modify the `load_detector` and `load_action_classifer` functions found in `./loaders.py`.
 <!--, for object detector we recommend using detectron2, YoloV5, megadetector (for terrestrials) or megafishdetector (for fish).
 -->
