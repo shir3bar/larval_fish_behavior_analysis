@@ -30,7 +30,7 @@ def load_log(path):
 
 def make_folders(path):
     #if not os.path.exists(path):
-    os.makedirs(os.path.join(path, 'swim'), exist_ok=True)
+    os.makedirs(os.path.join(path, 'non-strike'), exist_ok=True)
     os.makedirs(os.path.join(path, 'strike'), exist_ok=True)
 
 
@@ -43,7 +43,7 @@ def write_clip(folder_path,clip,prediction,frame_num,idx,centroid,vid_name):
 
         movie_path = os.path.join(folder_path, 'strike',clip_name)
     else:
-        movie_path = os.path.join(folder_path, 'swim',
+        movie_path = os.path.join(folder_path, 'non-strke',
                                   clip_name)
     save_clip(clip, movie_path, transformed=False)
     return clip_name
@@ -54,12 +54,14 @@ def get_fps(vid, vid_name):
     else:
         fps = vid.get(cv2.CAP_PROP_FPS)
     return round(fps)
+
 def load_preds(preds_path):
     df = pd.read_csv(preds_path)
     df.centroid = df.centroid.map(
         lambda cent: [int(x) for x in cent.strip('[]').split()] if type(cent) == str else np.NaN)
     df.bboxs = df.bboxs.map(lambda cent: [float(x) for x in cent.strip('[]').split()] if type(cent) == str else np.NaN)
     return df
+
 def only_classify(root_path, vid_path, vid_name, clip_size, classifier, classifier_cfg, clip_duration=80,
                   thresh=0.5, save_clips=True,
                   classifier_name='SSv2'):
