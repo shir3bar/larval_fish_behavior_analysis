@@ -25,7 +25,8 @@ def get_vid_len(vid,vid_path):
 
 def analyze_vid(root_path, vid_path, vid_name, clip_size,
                   detector, classifier, classifier_cfg, clip_duration=80,
-                  thresh=0.5, fish_to_sample=1000, save_clips=True, last_frame=None, start_idx=0):
+                  thresh=0.5, fish_to_sample=1000, save_clips=True, 
+                  last_frame=None, start_idx=0, detector_type='fasterRCNN',classifier_type='SlowFastSSv2'):
     # Load video and get video properties:
     vid = load_video(vid_path)
     vid_len = get_vid_len(vid, vid_path)
@@ -64,10 +65,10 @@ def analyze_vid(root_path, vid_path, vid_name, clip_size,
                 _,frame = vid.read()
         except:
             comments = "can't read frame from video"
-        outputs,boxes = get_fish_detection(detector, frame)
+        outputs,boxes = get_fish_detection(detector, frame, detector_type=detector_type)
         if len(all_preds) == 0 and len(boxes) > 0:
             plot_boxes(frame, outputs, save=True, filepath=os.path.join(folder_path, 'sample_frames',
-                                                                    f'{vid_name}_frame_{frame_num}.jpg'))
+                                                                    f'{vid_name}_frame_{frame_num}.jpg'), detector_type=detector_type)
             plt.close()
 
         if len(boxes) > 0:
@@ -135,7 +136,10 @@ def analyze_vid(root_path, vid_path, vid_name, clip_size,
                  'frame_size': clip_size,
                  'num_labeled_strike': tot_strike,
                  'num_labeled_swim': tot_swim,
-                 'total_clips': tot_swim + tot_strike, 'execution_time': execution_time}
+                 'total_clips': tot_swim + tot_strike, 'execution_time': execution_time,
+                 'detector_type':detector_type,
+                 'classifier_type':classifier_type
+                 }
     log_df = pd.concat([log_df, pd.DataFrame([entry])],axis=0, ignore_index=True)
     log_df.to_csv(log_path, index=False)
     print(log_path)
@@ -172,8 +176,10 @@ if __name__ == '__main__':
     vid_name = args.video_name
     if args.detector_name=='fasterRCNN':
         detector_path = f'./models/{args.detector_name}.pth'
+        detector_type = args.detector_name
     else:
         detector_path = f'./models/{args.detector_name}.pt'
+        detector_type = args.detector_name.split('_')[0] # yolov5_640px or yolov5_1080px doesn't matter
     cfg_path = args.cfg_path
     classifier_path = f'./models/{args.classifier_name}.pt'
     detector, cfg_detect = load_detector(detector_path, confidence=0.5, nms=0.3) #these confidence and nms settings worked for us worth playing around with
@@ -186,7 +192,8 @@ if __name__ == '__main__':
                           vid_name=vid_name, clip_size=args.clip_size,
                       detector=detector, classifier=classifier, classifier_cfg=cfg_classify,
                         fish_to_sample=args.fish_to_sample, clip_duration=args.clip_duration,
-                        save_clips=not args.no_clips,thresh=args.dec_thresh, last_frame=args.last_frame)
+                        save_clips=not args.no_clips,thresh=args.dec_thresh, last_frame=args.last_frame, 
+                        detector_type=detector_type,classifier_type=args.classifier_name)
         else:
             print(f'Video file not found in path {vid_path}')
     else:
@@ -210,5 +217,5 @@ if __name__ == '__main__':
                       detector=detector, classifier=classifier, classifier_cfg=cfg_classify,
                         fish_to_sample=args.fish_to_sample,clip_duration=args.clip_duration,
                         save_clips=not args.no_clips, thresh=args.dec_thresh, last_frame=args.last_frame,
-                        start_idx=args.first_frame)
+                        start_idx=args.first_frame, detector_type=detector_type,classifier_type=args.classifier_name)
     print('Done!')
