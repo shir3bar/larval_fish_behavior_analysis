@@ -186,7 +186,7 @@ if __name__ == '__main__':
         detector_type = args.detector_name.split('_')[0] # yolov5_640px or yolov5_1080px doesn't matter
     cfg_path = args.cfg_path
     classifier_path = f'./models/{args.classifier_name}.pt'
-    detector, cfg_detect = load_detector(detector_path, confidence=0.5, nms=0.3) #these confidence and nms settings worked for us worth playing around with
+    detector, cfg_detect = load_detector(detector_path, confidence=0.5, nms=0.3,detector_type=detector_type) #these confidence and nms settings worked for us worth playing around with
     classifier, cfg_classify = load_action_classifier(cfg_path, classifier_path, pytorchvideo=True)
 
     if vid_name != 'all':
