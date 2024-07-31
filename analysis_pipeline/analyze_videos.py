@@ -170,7 +170,10 @@ if __name__ == '__main__':
     os.makedirs(root_experiment_folder, exist_ok=True)
     video_folder = args.video_dir
     vid_name = args.video_name
-    detector_path = './models/detector.pth'
+    if args.detector_name=='fasterRCNN':
+        detector_path = f'./models/{args.detector_name}.pth'
+    else:
+        detector_path = f'./models/{args.detector_name}.pt'
     cfg_path = args.cfg_path
     classifier_path = f'./models/{args.classifier_name}.pt'
     detector, cfg_detect = load_detector(detector_path, confidence=0.5, nms=0.3) #these confidence and nms settings worked for us worth playing around with

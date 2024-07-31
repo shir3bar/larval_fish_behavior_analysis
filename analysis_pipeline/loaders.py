@@ -24,22 +24,29 @@ def load_video(path):
         print('Unsupported file format')
     return vid
 
-def load_detector(path,nms=0.3,confidence=None):
-    cfg = get_cfg()
-    cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml")) #Get the basic model configuration from the model zoo
-    #cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml")
-    cfg.MODEL.WEIGHTS = path
-    cfg.DATASETS.TRAIN = ('fish_train',)
-    cfg.MODEL.DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
-    cfg.MODEL.ROI_HEADS.NMS_THRESH_TEST = nms
-    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2
-    if confidence is not None:
-        cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = confidence   # set a custom testing threshold
-    MetadataCatalog.get("fish_train").set(thing_classes=["fish", 'blurry_fish'])
-    predictor = DefaultPredictor(cfg)
+def load_detector(path,nms=0.3,confidence=None, detector_type = 'fasterRCNN'):
+    if detector_type == 'fasterRCNN':
+        cfg = get_cfg()
+        cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml")) #Get the basic model configuration from the model zoo
+        #cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml")
+        cfg.MODEL.WEIGHTS = path
+        cfg.DATASETS.TRAIN = ('fish_train',)
+        cfg.MODEL.DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+        cfg.MODEL.ROI_HEADS.NMS_THRESH_TEST = nms
+        cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2
+        if confidence is not None:
+            cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = confidence   # set a custom testing threshold
+        MetadataCatalog.get("fish_train").set(thing_classes=["fish", 'blurry_fish'])
+        predictor = DefaultPredictor(cfg)
+        return predictor,cfg
+    elif detector_type == 'yolov5':
+        model = torch.hub.load('ultralytics/yolov5','custom', path=path, force_reload=True, trust_repo=True)  # or yolov5n - yolov5x6 or custom
+        model.conf = confidence
+        model.iou = nms # NMS confidence threshold
+        return model, None
     #model = build_model(cfg)  # returns a torch.nn.Module
     #DetectionCheckpointer(model).load(path)  # load a file, usually from cfg.MODEL.WEIGHTS
-    return predictor,cfg
+    
 
 
 def load_action_classifier(cfg_path, model_chkpt_path,pytorchvideo=False):

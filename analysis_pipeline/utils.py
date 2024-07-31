@@ -11,14 +11,20 @@ import json
 
 IDX_TO_CLASSES = {0:'feed', 1:'swim'}
 
-def get_fish_detection(predictor, frame):
+def get_fish_detection(predictor, frame,detector_type='fasterRCNN'):
     if len(frame.shape) == 2:
         im = cv2.cvtColor(frame,cv2.COLOR_GRAY2RGB)
     else:
         im = frame
     outputs = predictor(im)
-    boxes = outputs['instances'].pred_boxes.tensor.cpu().numpy()
-    scores = outputs['instances'].scores.cpu().numpy()
+    if detector_type == 'fasterRCNN':
+        boxes = outputs['instances'].pred_boxes.tensor.cpu().numpy()
+        scores = outputs['instances'].scores.cpu().numpy()
+    elif detector_type == 'yolov5':
+        boxes = outputs.xyxy[0][:,:4].cpu().numpy() # results come out a tensor [x_min, y_min, x_max, y_max, confidence_score, class]
+        scores = outputs.xyxy[0][:,4].cpu().numpy()
+    else:
+        raise ValueError(f'Detector type {detector_type} not implemented')
     boxes_dict = {}
     for score,box in zip(scores,boxes):
         boxes_dict[score] = box
@@ -77,19 +83,24 @@ def get_action_classifications(model, clips, cfg, device, verbose=True, normaliz
     return preds,pred_classes, pred_class_names, transformed_clips
 
 
-def plot_boxes(frame, predictions, save=False, filepath=''):
+def plot_boxes(frame, predictions, save=False, filepath='', detector_type='fasterRCNN'):
     if len(frame.shape)==2:
         im=cv2.cvtColor(frame,cv2.COLOR_GRAY2RGB)
     else:
         im=frame
-    fish_metadata = MetadataCatalog.get("fish_train")
-    v = Visualizer(im[:, :, ::-1],
-                       metadata=fish_metadata,
-                       scale=0.5,
-        )
-    out = v.draw_instance_predictions(predictions["instances"].to("cpu"))
+    if detector_type == 'fasterRCNN':
+        fish_metadata = MetadataCatalog.get("fish_train")
+        v = Visualizer(im[:, :, ::-1],
+                        metadata=fish_metadata,
+                        scale=0.5,
+            )
+        out = v.draw_instance_predictions(predictions["instances"].to("cpu")).get_image()[:, :, ::-1]
+    elif detector_type == 'yolov5':
+        out = np.squeeze(predictions.render())
+    else:
+        raise ValueError(f'Detector type {detector_type} not implemented')
     plt.figure(figsize=(20,10))
-    plt.imshow(out.get_image()[:, :, ::-1])
+    plt.imshow(out)
     plt.axis('off')
     if save:
         plt.savefig(filepath)
