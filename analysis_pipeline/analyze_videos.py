@@ -11,6 +11,8 @@ from clip_utils import get_clips, save_clip
 import time
 import matplotlib.pyplot as plt
 
+import pathlib
+pathlib.PosixPath = pathlib.WindowsPath
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -118,7 +120,8 @@ def analyze_vid(root_path, vid_path, vid_name, clip_size,
         time_sampled = ((frames[-1]/fps)/60)-((frames[0]/fps)/60)  # time sampled in minutes
         fish_bar.update(time_sampled-prev_time)
     plot_boxes(frame, outputs, save=True, filepath=os.path.join(folder_path, 'sample_frames',
-                                                                f'{vid_name}_frame_{frame_num}.jpg'))
+                                                                f'{vid_name}_frame_{frame_num}.jpg'),
+                                                                detector_type=detector_type)
     plt.close()
     fish_bar.close()
     df_preds.to_csv(os.path.join(folder_path, 'preds.csv'), index=False)
@@ -186,7 +189,7 @@ if __name__ == '__main__':
         detector_type = args.detector_name.split('_')[0] # yolov5_640px or yolov5_1080px doesn't matter
     cfg_path = args.cfg_path
     classifier_path = f'./models/{args.classifier_name}.pt'
-    detector, cfg_detect = load_detector(detector_path, confidence=0.5, nms=0.3,detector_type=detector_type) #these confidence and nms settings worked for us worth playing around with
+    detector, cfg_detect = load_detector(detector_path, confidence=0.3, nms=0.3,detector_type=detector_type) #these confidence and nms settings worked for us worth playing around with
     classifier, cfg_classify = load_action_classifier(cfg_path, classifier_path, pytorchvideo=True)
 
     if vid_name != 'all':
