@@ -43,7 +43,7 @@ def write_clip(folder_path,clip,prediction,frame_num,idx,centroid,vid_name):
 
         movie_path = os.path.join(folder_path, 'strike',clip_name)
     else:
-        movie_path = os.path.join(folder_path, 'non-strke',
+        movie_path = os.path.join(folder_path, 'non-strike',
                                   clip_name)
     save_clip(clip, movie_path, transformed=False)
     return clip_name
