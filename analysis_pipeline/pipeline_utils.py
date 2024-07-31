@@ -63,15 +63,14 @@ def get_action_classifications(model, clips, cfg, device, verbose=True, normaliz
                 batch = get_batch([clip])
                 batch = [i.to(device) for i in batch]
                 preds.append(model(batch))
-
-        
-        preds = torch.vstack(preds)
     else:
-        batchs = get_batches(transformed_clips,batch_size=1)
+        batchs = get_batches(transformed_clips,batch_size=4)
+        preds = []
         for batch in batchs:
             batch = [i.to(device) for i in batch]
             with torch.no_grad():
-                preds = model(batch)
+                preds.append(model(batch))
+    preds = torch.vstack(preds)        
     # Get the predicted classes
     post_act = torch.nn.Softmax(dim=1)
     preds = post_act(preds)
