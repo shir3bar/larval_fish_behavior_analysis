@@ -3,7 +3,7 @@ import os.path
 from loaders import *
 import torch
 import matplotlib.pyplot as plt
-from utils import get_action_classifications, get_fish_detection,plot_boxes, get_annts_by_frame
+from analysis_pipeline.pipeline_utils import get_action_classifications, get_fish_detection,plot_boxes, get_annts_by_frame
 from clip_utils import get_clips, transform_clips, save_clip
 import random
 #from data_utils import get_coco_style_json
