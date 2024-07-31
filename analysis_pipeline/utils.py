@@ -20,7 +20,7 @@ def get_fish_detection(predictor, frame,detector_type='fasterRCNN'):
     if detector_type == 'fasterRCNN':
         boxes = outputs['instances'].pred_boxes.tensor.cpu().numpy()
         scores = outputs['instances'].scores.cpu().numpy()
-    elif detector_type == 'yolov5':
+    elif detector_type.startswith('yolov5'):
         boxes = outputs.xyxy[0][:,:4].cpu().numpy() # results come out a tensor [x_min, y_min, x_max, y_max, confidence_score, class]
         scores = outputs.xyxy[0][:,4].cpu().numpy()
     else:
@@ -95,7 +95,7 @@ def plot_boxes(frame, predictions, save=False, filepath='', detector_type='faste
                         scale=0.5,
             )
         out = v.draw_instance_predictions(predictions["instances"].to("cpu")).get_image()[:, :, ::-1]
-    elif detector_type == 'yolov5':
+    elif detector_type.startswith('yolov5'):
         out = np.squeeze(predictions.render())
     else:
         raise ValueError(f'Detector type {detector_type} not implemented')

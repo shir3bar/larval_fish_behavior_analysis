@@ -86,11 +86,15 @@ def analyze_vid(root_path, vid_path, vid_name, clip_size,
                 if save_clips:
                     clip_name=write_clip(folder_path,clip=clips[i],prediction=thresh_pred,frame_num=frame_num,idx=i,
                                vid_name=vid_name, centroid=centroids[i])
+                if detector_type == 'fasterRCNN': #trained on both 'blurry' and 'fish' classes
+                    detection_pred_class = outputs['instances'].pred_classes[i].item()
+                else:
+                    detection_pred_class = 0 #yolos were trained on a single 'fish' class
                 new_row = {'vid_name':vid_name,'frame':frame_num,'clip_name':clip_name,
                                             'fish_id':i,'centroid':centroids[i],
                                             'bboxs':list(boxes.values())[i],
                                         'detection_scores':list(boxes.keys())[i],
-                                            'detection_pred_class':outputs['instances'].pred_classes[i].item(),
+                                            'detection_pred_class':detection_pred_class,
                                             'action_preds':thresh_pred,
                                             'strike_scores':preds[i,0].item(),'comments':comments}
                 df_preds = pd.concat([df_preds,pd.DataFrame([new_row])],axis=0,ignore_index=True)

@@ -23,7 +23,7 @@ def get_parser():
     parser.add_argument('-classify_only',action='store_true',
                         help='Use stored detections (must be in specific csv format)')
     parser.add_argument('-classifier_name',type=str,default='SlowFastSSv2',choices=['SlowFastSSv2','SlowFastKinetics'], help='Name your classifer .pt file')
-    parser.add_argument('-detector_name',type=str,default='fasterRCNN',choices=['fasterRCNN','yolov5_640px','yolov5_1080px'],help='Name your detector .pt file')
+    parser.add_argument('-detector_name',type=str,default='fasterRCNN',choices=['fasterRCNN','yolov5m_640px','yolov5m_1080px'], help='Name your detector .pt file')
     parser.add_argument('-video_list_path',type=str, default='', 
                         help='path to a csv with video file names to analyze (a subset from the video data folder)')
     parser.add_argument('-cfg_path',type=str, 

@@ -39,7 +39,7 @@ def load_detector(path,nms=0.3,confidence=None, detector_type = 'fasterRCNN'):
         MetadataCatalog.get("fish_train").set(thing_classes=["fish", 'blurry_fish'])
         predictor = DefaultPredictor(cfg)
         return predictor,cfg
-    elif detector_type == 'yolov5':
+    elif detector_type.startswith('yolov5'):
         model = torch.hub.load('ultralytics/yolov5','custom', path=path, force_reload=True, trust_repo=True)  # or yolov5n - yolov5x6 or custom
         model.conf = confidence
         model.iou = nms # NMS confidence threshold
