@@ -5,7 +5,7 @@ from tqdm import tqdm
 from loaders import *
 import random
 from cust_parser import get_parser
-from utils import get_action_classifications,get_fish_detection,plot_boxes, get_detections_from_preds
+from analysis_pipeline.pipeline_utils import get_action_classifications,get_fish_detection,plot_boxes, get_detections_from_preds
 from fish_for_fish import make_folders, write_clip, get_fps, load_log
 from clip_utils import get_clips, save_clip
 import time
