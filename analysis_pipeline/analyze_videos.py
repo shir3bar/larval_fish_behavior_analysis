@@ -180,7 +180,7 @@ if __name__ == '__main__':
     root_experiment_folder = args.root_dir  # where we save all the video experiments
     os.makedirs(root_experiment_folder, exist_ok=True)
     video_folder = args.video_dir
-    vid_name = args.video_name
+    vid_name = args.vid_name
     if args.detector_name=='fasterRCNN':
         detector_path = f'./models/{args.detector_name}.pth'
         detector_type = args.detector_name
