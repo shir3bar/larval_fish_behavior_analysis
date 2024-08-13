@@ -38,21 +38,21 @@ If you're using custom models, you might need to change the configs or the model
 ### Run pipeline
 Run pipeline on all untrimmed videos in a folder:
 ```commandline
-python fish_for_fish.py /path/to/save/results /path/to/video/data
+python analyze_videos.py /path/to/save/results /path/to/video/data
 ```
 If you'd like a to run on a single video, use:
 ```commandline
-python fish_for_fish.py /path/to/save/results /path/to/video/data -video_name video_file_name
+python analyze_videos.py /path/to/save/results /path/to/video/data -vid_name video_file_name
 ```
 These option will save all clips resulting from the dataset as `.avi` files, using the 
 `-no_clips` flag will only save `.csv`s with model predictions (see sample video section for an example of output).
 
 To use the pipeline with pre-existing detections, use the `-classify_only` flag and check out our `detections.csv` for an example of the expected format.
 
-For other options such as clip sizes, durations, and duration of samples from pre-existing videos, please see `./parser.py` or:
+For other options such as clip sizes, durations, and duration of samples from pre-existing videos, please see `./cust_parser.py` or:
 
 ```commandline
-python fish_for_fish.py --help
+python analyze_videos.py --help
 ```
 
 ### ***SOON:*** Sample video

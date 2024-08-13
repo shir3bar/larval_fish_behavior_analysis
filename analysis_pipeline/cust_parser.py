@@ -5,7 +5,7 @@ def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('root_dir', help='enter root path where experiments will be saved')
     parser.add_argument('video_dir', help='enter path to directory containing videos')
-    parser.add_argument('-video_name', default='all', help='Specify a single video to analyze, if no name is specified '
+    parser.add_argument('-vid_name', default='all', help='Specify a single video to analyze, if no name is specified '
                                                            'all videos in the folder will be analyzed')
     parser.add_argument('-clip_duration',type=int,default=80,help='Duration of clips to cut for the action classifier')
     parser.add_argument('-clip_size',type=int,default=400,help='Size of clips to cut for the action classifier')
