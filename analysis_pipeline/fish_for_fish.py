@@ -151,7 +151,7 @@ def only_classify(root_path, vid_path, vid_name, clip_size, classifier, classifi
     execution_time = time.time() - start_time
     tot_strike = fish_sampled
     if len(all_preds)>0:
-        tot_swim = (torch.vstack(all_preds)<0.9).sum(axis=0)[0].item()
+        tot_swim = (torch.vstack(all_preds)<thresh).sum(axis=0)[0].item()
     else:
         tot_swim = 0
 
